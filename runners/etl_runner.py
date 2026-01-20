@@ -5,18 +5,23 @@ Mimics the existing ETL framework approach with CSV control and XML reporting
 """
 
 import sys
+import os
 import time
 import argparse
+import configparser
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.csv_controller import CSVTestController
 from utils.sql_repository import SQLRepository
 from utils.sqlite_client import SQLiteClient
 from utils.xml_reporter import XMLReportGenerator
-import configparser
 
 class ETLTestRunner:
     def __init__(self, config_file="config/master.properties"):
         self.config = self._load_config(config_file)
-        self.csv_controller = CSVTestController()
+        self.csv_controller = CSVTestController("data/test_cases.csv")
         self.sql_repository = SQLRepository()
         self.db_client = SQLiteClient()
         self.xml_reporter = XMLReportGenerator()
