@@ -1,0 +1,6 @@
+functionality,test_id,sql_id,expected_condition,enabled,description,test_type,priority,owner,last_updated
+database,DB_01,1,EQUAL,TRUE,Product count validation,DATABASE,HIGH,John,2024-01-15
+database,DB_02,2,NOT_EQUAL,TRUE,Check for null values,DATABASE,MEDIUM,Sarah,2024-01-15
+api,API_01,13,EQUAL,TRUE,API response validation,API,HIGH,Mike,2024-01-15
+integration,INT_01,5,EQUAL,TRUE,API to DB sync validation,INTEGRATION,CRITICAL,Lisa,2024-01-15
+etl,ETL_01,3,EQUAL,TRUE,Source to target consistency,ETL,HIGH,David,2024-01-15

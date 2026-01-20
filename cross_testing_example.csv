@@ -1,0 +1,13 @@
+functionality,test_id,sql_id,expected_condition,enabled,description,test_type
+database,DB_01,1,EQUAL,TRUE,Product count validation,DATABASE
+database,DB_02,2,NOT_EQUAL,TRUE,Check for null values,DATABASE
+api,API_01,13,EQUAL,TRUE,API response validation,API
+api,API_02,14,GREATER_THAN,TRUE,API data completeness,API
+etl,ETL_01,3,EQUAL,TRUE,Source to target consistency,ETL
+etl,ETL_02,4,LESS_THAN,TRUE,Data transformation accuracy,ETL
+integration,INT_01,5,EQUAL,TRUE,API to DB sync validation,INTEGRATION
+integration,INT_02,6,GREATER_THAN,TRUE,End-to-end data flow,INTEGRATION
+cross_validation,CROSS_01,7,EQUAL,TRUE,API count matches DB count,CROSS
+cross_validation,CROSS_02,8,EQUAL,TRUE,Price consistency across systems,CROSS
+performance,PERF_01,9,LESS_THAN,TRUE,Query response time check,PERFORMANCE
+quality,QUAL_01,10,NOT_EQUAL,TRUE,Data quality validation,QUALITY

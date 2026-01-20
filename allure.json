@@ -1,0 +1,14 @@
+{
+  "id": "etl-testing-framework",
+  "name": "ETL Testing Framework",
+  "url": "http://localhost",
+  "launch": {
+    "name": "ETL Test Execution",
+    "description": "Automated ETL pipeline testing with API and database validation"
+  },
+  "environment": {
+    "framework": "pytest",
+    "database": "SQLite",
+    "api": "Fake Store API"
+  }
+}

@@ -1,0 +1,116 @@
+🔌 API-Centric Testing Framework (Fake Store / ReqRes)                  API tests prove “Does system work?”
+API Calls
+ → Business Logic
+ → Database
+ → ETL / Reports / UI
+
+
+Focus: Data & behavior
+
+Tools: REST calls (GET / POST)
+
+Stable & fast
+
+🧠 How This Framework Actually Works
+✔ It uses API as the single source of truth
+
+Validate business logic
+
+Validate data integrity
+
+Validate integrations
+
+Validate ETL pipelines
+
+
+
+
+| Area                | Supported     |
+| ------------------- | ------------- |
+| API Testing         | ✅ Core        |
+| Database Testing    | ✅ Strong      |
+| ETL Testing         | ✅ Strong      |
+| Integration Testing | ✅ Strong      |
+| UI Testing          | ❌ No locators |
+| Performance (basic) | ✅             |
+| Regression          | ✅             |
+
+
+
+
+
+
+comparison: playwright vs ETL
+
+
+| Area               | Python    | Playwright |
+| ------------------ | --------- | ---------- |
+| ETL Testing        | ⭐⭐⭐⭐⭐     | ⭐⭐         |
+| Data Validation    | ⭐⭐⭐⭐⭐     | ⭐⭐         |
+| DB Testing         | ⭐⭐⭐⭐⭐     | ⭐⭐         |
+| UI Testing         | ❌         | ⭐⭐⭐⭐⭐      |
+| API Testing        | ⭐⭐⭐⭐      | ⭐⭐⭐⭐       |
+| Learning Curve     | Easy      | Medium     |
+| Industry ETL Usage | VERY HIGH | LOW        |
+
+Typical Stack
+Python
+ + Pytest
+ + Requests
+ + SQL
+ + JSON Schema
+ + Allure
+
+Real Validation Flow
+Source API
+ → Staging DB
+ → Target DB
+ → Business Rule Validation
+
+
+
+
+
+
+✅ Required Installations (Python-based API Testing Framework)
+🔹 Core  Python 3.10+ 
+	python --version
+	pip --version
+
+   VS Code / PyCharm :- Python, Pylance, REST Client, Prettier (optional)
+
+   create new folder: mkdir etl-api-test-framework, cd etl-api-test-framework
+
+   Create Virtual Environment: python -m venv venv, venv\Scripts\activate, pip install --upgrade pip
+
+
+🔹 Install Core Framework Libraries (API Testing): requests, pytest, pytest-html
+						    pip install pytest, pip install requests, pip install pytest-html
+
+
+🔹 Install Validation & Config Libraries : jsonschema, assertpy (optional), python-dotenv, pyyaml
+
+					   pip install jsonschema, pip install python-dotenv, pip install pyyaml
+
+
+🔹 Reporting & Logging: allure-pytest (optional), logging (built-in)
+
+			pip install allure-pytest
+
+
+🔹 Database Testing (Optional)
+
+		psycopg2 (PostgreSQL) : pip install psycopg2-binary
+		mysql-connector-python : pip install mysql-connector-python
+		pyodbc: pip install pyodbc
+
+🔹 Performance (Optional)
+
+		locust
+
+		pytest-benchmark
+
+🔹 Utilities
+
+		faker : pip install faker
+		uuid  : pip install uuid 

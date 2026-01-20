@@ -1,0 +1,219 @@
+Complete ETL Testing Framework Guide
+📁 Framework Structure
+ETL_testing/
+├── config/                    # Configuration files
+│   ├── .env                  # Environment variables (DB, API settings)
+│   └── config.yaml           # Test configuration & validation rules
+├── utils/                     # Core utilities
+│   ├── api_client.py         # HTTP API client
+│   ├── sqlite_client.py      # Database client
+│   ├── base_test.py          # Base test class
+│   └── data_validator.py     # Schema & data validation
+├── schemas/                   # JSON schemas for validation
+│   ├── product_schema.json   # Product data structure
+│   └── user_schema.json      # User data structure
+├── tests/                     # Test files
+│   ├── api/                  # API tests
+│   ├── db/                   # Database tests
+│   ├── etl/                  # ETL pipeline tests
+│   └── conftest.py           # Test fixtures
+├── reports/                   # Test reports
+│   ├── allure-results/       # Allure raw data
+│   └── allure-report/        # Allure HTML report
+└── etl_test.db               # SQLite database
+
+Copy
+⚙️ Database Configuration
+File: config/.env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=etl_test
+DB_USER=postgres
+DB_PASSWORD=password
+
+# API Configuration
+API_BASE_URL=https://fakestoreapi.com
+
+Copy
+File: utils/sqlite_client.py
+Purpose: Database connection & queries
+
+Usage: Automatically used by all tests
+
+Database: Currently SQLite (etl_test.db)
+
+To Change Database:
+PostgreSQL: Use utils/db_client.py instead
+
+MySQL: Modify connection string in db_client.py
+
+Update: utils/base_test.py to use different client
+
+📝 Writing Test Files
+1. API Tests - tests/api/
+from utils.base_test import BaseTest
+import allure
+
+@allure.feature("API Testing")
+class TestProductAPI(BaseTest):
+    
+    @allure.story("Product Validation")
+    def test_get_products(self):
+        response = self.api_client.get("/products")
+        assert response.status_code == 200
+        products = response.json()
+        assert len(products) > 0
+
+Copy
+python
+2. Database Tests - tests/db/
+from utils.base_test import BaseTest
+import allure
+
+@allure.feature("Database Testing")
+class TestDataIntegrity(BaseTest):
+    
+    def test_data_quality(self):
+        # Check for duplicates
+        duplicates = self.db_client.execute_query(
+            "SELECT id, COUNT(*) FROM products GROUP BY id HAVING COUNT(*) > 1"
+        )
+        assert len(duplicates) == 0
+
+Copy
+python
+3. ETL Tests - tests/etl/
+from utils.base_test import BaseTest
+import allure
+
+@allure.feature("ETL Pipeline")
+class TestETLPipeline(BaseTest):
+    
+    def test_api_to_db_consistency(self):
+        # Get API data
+        api_data = self.api_client.get("/products").json()
+        
+        # Get DB data
+        db_data = self.db_client.execute_query("SELECT * FROM products")
+        
+        # Validate consistency
+        assert len(api_data) == len(db_data)
+
+Copy
+python
+🧪 Test Areas & What to Test
+1. API Testing
+Endpoint validation
+
+Response status codes
+
+JSON schema validation
+
+Data format verification
+
+Error handling
+
+2. Database Testing
+Data integrity
+
+Constraint validation
+
+Duplicate detection
+
+Null value checks
+
+Data type validation
+
+3. ETL Pipeline Testing
+Source to target consistency
+
+Data transformation rules
+
+Record count validation
+
+Data quality checks
+
+Performance metrics
+
+4. Integration Testing
+API ↔ Database sync
+
+End-to-end data flow
+
+System connectivity
+
+Error propagation
+
+🚀 How to Use the Framework
+1. Run All Tests
+pytest tests/ --alluredir=reports/allure-results -v
+
+Copy
+bash
+2. Run Specific Test Types
+pytest -m api tests/          # API tests only
+pytest -m db tests/           # Database tests only  
+pytest -m etl tests/          # ETL tests only
+
+Copy
+bash
+3. Generate Allure Report
+cd allure-2.32.0\bin
+allure.bat generate ..\..\reports\allure-results -o ..\..\reports\allure-report --clean
+start ..\..\reports\allure-report\index.html
+
+Copy
+bash
+4. Add New Tests
+Create test file in appropriate folder (api/, db/, etl/)
+
+Inherit from BaseTest
+
+Use self.api_client and self.db_client
+
+Add Allure annotations for reporting
+
+5. Configure for Your Environment
+Update config/.env with your database/API details
+
+Modify config/config.yaml for validation rules
+
+Add JSON schemas in schemas/ folder
+
+Run init_database.py to setup your database
+
+📊 Framework Capabilities
+Area	Coverage	Files
+API Testing	✅ Full	tests/api/
+Database Testing	✅ Full	tests/db/
+ETL Validation	✅ Full	tests/etl/
+Schema Validation	✅ Full	schemas/
+Reporting	✅ Allure	reports/
+Configuration	✅ Flexible	config/
+Your framework is production-ready for comprehensive ETL testing!
+
+
+
+
+API TESTING:-
+----------------------
+run command for the test_api_examples.py file :  $env:PYTHONPATH = (Get-Location); python -m pytest tests/api/test_api_examples.py -v --alluredir=reports/allure-results
+
+generate the allure report for the executed file: cd allure-2.32.0\bin; .\allure.bat serve ..\..\reports\allure-results
+
+
+
+DB TESTING: -
+----------------------
+run command for the example file: $env:PYTHONPATH = (Get-Location); python -m pytest tests/db/test_database_examples.py -v --alluredir=reports/allure-results
+
+
+ETL_testing:-
+----------------------
+run command for the example file: $env:PYTHONPATH = (Get-Location); python -m pytest tests/etl/test_etl_examples.py -v --alluredir=reports/allure-results
+
+Integration:-
+-----------------------
+run command for the example file: python -m pytest tests/integration/test_integration_examples.py -v --alluredir=reports/allure-results
+

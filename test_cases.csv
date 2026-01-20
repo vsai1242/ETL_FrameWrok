@@ -1,0 +1,12 @@
+functionality,test_id,sql_id,expected_condition,enabled,description
+accommodation,ACC_01,1,EQUAL,TRUE,Validate accommodation count
+accommodation,ACC_02,2,NOT_EQUAL,TRUE,Check invalid accommodations
+flight,FLT_01,3,EQUAL,TRUE,Flight record validation
+flight,FLT_02,4,GREATER_THAN,FALSE,Flight capacity check
+pricing,PRC_01,5,EQUAL,TRUE,Price consistency check
+pricing,PRC_02,6,LESS_THAN,TRUE,Price range validation
+general,GEN_01,7,EQUAL,TRUE,Total record count
+general,GEN_02,8,NOT_EQUAL,TRUE,Duplicate check
+integration,INT_01,9,EQUAL,TRUE,API to DB sync validation
+integration,INT_02,10,GREATER_THAN,TRUE,End-to-end data flow
+integration,INT_03,11,EQUAL,TRUE,Cross-system consistency

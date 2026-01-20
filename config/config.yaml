@@ -1,0 +1,21 @@
+api:
+  timeout: 30
+  retry_count: 3
+  endpoints:
+    products: "/products"
+    users: "/users"
+    categories: "/products/categories"
+
+database:
+  connection_timeout: 10
+  query_timeout: 30
+  
+etl:
+  batch_size: 1000
+  validation_rules:
+    - required_fields: ["id", "title", "price"]
+    - data_types: {"id": "int", "price": "float"}
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
