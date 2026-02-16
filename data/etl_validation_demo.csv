@@ -1,0 +1,6 @@
+test_id,test_name,source_query,target_query,validation_type,enabled,description,severity
+TEST_01,Total Record Count,SELECT COUNT(*) FROM products,SELECT COUNT(*) FROM products,row_count_comparison,TRUE,Validate total record count matches,critical
+TEST_02,Category Count,SELECT COUNT(DISTINCT category) FROM products,SELECT COUNT(DISTINCT category) FROM products,row_count_comparison,TRUE,Validate category count,high
+TEST_03,Price Range Check,SELECT COUNT(*) FROM products WHERE price > 0 AND price < 1000,SELECT COUNT(*) FROM products WHERE price > 0 AND price < 1000,row_count_comparison,TRUE,Validate price range,high
+TEST_04,RecID Validation,SELECT id FROM products WHERE id <= 5,SELECT id FROM products WHERE id IN ({recid_list}),duplicate_checks_primary_keys,TRUE,Validate product IDs exist,normal
+TEST_05,Null Check,SELECT * FROM products WHERE title IS NOT NULL,SELECT * FROM products WHERE title IS NOT NULL,null_checks_mandatory_columns,FALSE,Check for null titles,high

@@ -16,6 +16,11 @@ certifi==2026.1.4
 # Database Connectivity
 psycopg2-binary==2.9.11
 snowflake-connector-python>=3.0.0
+pyodbc==5.0.1
+
+# Azure & Fabric Authentication
+azure-identity==1.19.0
+msal==1.31.1
 
 # Data Processing & CSV Handling
 pandas>=1.5.0
@@ -45,7 +50,6 @@ Pygments==2.19.2
 
 # Optional: Additional Database Drivers
 # mysql-connector-python==8.0.33
-# pyodbc==4.0.39
 
 # Optional: Performance Testing
 # pytest-benchmark==4.0.0

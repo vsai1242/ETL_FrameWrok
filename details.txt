@@ -115,6 +115,7 @@ Data format verification
 Error handling
 
 2. Database Testing
+
 Data integrity
 
 Constraint validation
@@ -126,7 +127,8 @@ Null value checks
 Data type validation
 
 3. ETL Pipeline Testing
-Source to target consistency
+
+Source to target consistency 
 
 Data transformation rules
 
@@ -135,6 +137,8 @@ Record count validation
 Data quality checks
 
 Performance metrics
+
+added for ETL Failure & Restart Handling
 
 4. Integration Testing
 API ↔ Database sync

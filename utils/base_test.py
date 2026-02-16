@@ -3,6 +3,8 @@ import logging
 import yaml
 from utils.api_client import APIClient
 from utils.sqlite_client import SQLiteClient
+from utils.fabric_client import FabricClient
+from utils.sqlserver_client import SQLServerClient
 
 class BaseTest:
     @pytest.fixture(autouse=True)
@@ -10,6 +12,14 @@ class BaseTest:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.api_client = APIClient("https://fakestoreapi.com")
         self.db_client = SQLiteClient()
+        
+        # Fabric clients for Bronze, Silver, Gold
+        self.bronze_client = FabricClient('BRONZE')
+        self.silver_client = FabricClient('SILVER')
+        self.gold_client = FabricClient('GOLD')
+        
+        # AX SQL Server client
+        self.ax_client = SQLServerClient('AX_SOURCE')
         
         # Load config
         with open('config/config.yaml', 'r') as f:

@@ -1,0 +1,1283 @@
+Queries: Bronze to Silver
+
+1.Count Of Rows
+
+2.Deleted Records
+
+3.Record Count By Max Date
+
+4.Inserted Records
+
+5.DP Date Format
+
+6.Updated Records
+
+7.DP Modified For Deleted
+
+
+
+
+===========================================================================================================================================
+1.Count Of Rows
+
+Bronze
+
+SELECT 
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICEJOUR) AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICETRANS) AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM fullload.CUSTTABLE) AS CUSTTABLE,
+    (SELECT COUNT(*) FROM fullload.CUSTTRANS) AS CUSTTRANS,
+    (SELECT COUNT(*) FROM fullload.FISCALCALENDARPERIOD) AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM fullload.GENERALJOURNALENTRY) AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM fullload.INVENTTRANS) AS INVENTTRANS,
+    (SELECT COUNT(*) FROM fullload.LEDGERJOURNALTRANS) AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM fullload.PURCHLINE) AS PURCHLINE,
+    (SELECT COUNT(*) FROM fullload.SALESLINE) AS SALESLINE,
+    (SELECT COUNT(*) FROM fullload.SALESTABLE) AS SALESTABLE,
+    (SELECT COUNT(*) FROM fullload.VENDINVOICEJOUR) AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.VENDTRANS) AS VENDTRANS,
+    (SELECT COUNT(*) FROM fullload.WORKFLOWTRACKINGSTATUSTABLE ) AS WORKFLOWTRACKINGSTATUSTABLE;
+--------------------------------------------------------------------------------------------------------------------------------------------------
+Silver
+
+SELECT 
+    (SELECT COUNT(*) FROM CUSTINVOICEJOUR WHERE  lhname='LH_AX_CANADA') AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM CUSTINVOICETRANS WHERE lhname='LH_AX_CANADA') AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM CUSTTABLE WHERE lhname='LH_AX_CANADA') AS CUSTTABLE,
+    (SELECT COUNT(*) FROM CUSTTRANS WHERE lhname='LH_AX_CANADA') AS CUSTTRANS,
+    (SELECT COUNT(*) FROM FISCALCALENDARPERIOD WHERE lhname='LH_AX_CANADA') AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM GENERALJOURNALENTRY WHERE lhname='LH_AX_CANADA') AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM INVENTTRANS WHERE lhname='LH_AX_CANADA') AS INVENTTRANS,
+    (SELECT COUNT(*) FROM LEDGERJOURNALTRANS WHERE lhname='LH_AX_CANADA') AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM PURCHLINE WHERE lhname='LH_AX_CANADA') AS PURCHLINE,
+    (SELECT COUNT(*) FROM SALESLINE WHERE lhname='LH_AX_CANADA') AS SALESLINE,
+    (SELECT COUNT(*) FROM SALESTABLE WHERE lhname='LH_AX_CANADA') AS SALESTABLE,
+    (SELECT COUNT(*) FROM VENDINVOICEJOUR WHERE lhname='LH_AX_CANADA') AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM VENDTRANS WHERE lhname='LH_AX_CANADA') AS VENDTRANS,
+    (SELECT COUNT(*) FROM WORKFLOWTRACKINGSTATUSTABLE WHERe  lhname='LH_AX_CANADA') AS WORKFLOWTRACKINGSTATUSTABLE;
+========================================================================================================================================================
+2.Deleted Records
+
+Bronze
+
+SELECT 
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICEJOUR WHERE isdelete = 1) AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICETRANS WHERE isdelete = 1) AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM fullload.CUSTTABLE WHERE isdelete = 1) AS CUSTTABLE,
+    (SELECT COUNT(*) FROM fullload.CUSTTRANS WHERE isdelete = 1) AS CUSTTRANS,
+    (SELECT COUNT(*) FROM fullload.FISCALCALENDARPERIOD WHERE isdelete = 1) AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM fullload.GENERALJOURNALENTRY WHERE isdelete = 1) AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM fullload.INVENTTRANS WHERE isdelete = 1) AS INVENTTRANS,
+    (SELECT COUNT(*) FROM fullload.LEDGERJOURNALTRANS WHERE isdelete = 1) AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM fullload.PURCHLINE WHERE isdelete = 1) AS PURCHLINE,
+    (SELECT COUNT(*) FROM fullload.SALESLINE WHERE isdelete = 1) AS SALESLINE,
+    (SELECT COUNT(*) FROM fullload.SALESTABLE WHERE isdelete = 1) AS SALESTABLE,
+    (SELECT COUNT(*) FROM fullload.VENDINVOICEJOUR WHERE isdelete = 1) AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.VENDTRANS WHERE isdelete = 1) AS VENDTRANS,
+    (SELECT COUNT(*) FROM fullload.WORKFLOWTRACKINGSTATUSTABLE WHERE isdelete = 1) AS WORKFLOWTRACKINGSTATUSTABLE;
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+Silver
+
+SELECT 
+    (SELECT COUNT(*) FROM CUSTINVOICEJOUR WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM CUSTINVOICETRANS WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM CUSTTABLE WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS CUSTTABLE,
+    (SELECT COUNT(*) FROM CUSTTRANS WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS CUSTTRANS,
+    (SELECT COUNT(*) FROM FISCALCALENDARPERIOD WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM GENERALJOURNALENTRY WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM INVENTTRANS WHERE isdelete = 1  and lhname='LH_AX_CANADA') AS INVENTTRANS,
+    (SELECT COUNT(*) FROM LEDGERJOURNALTRANS WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM PURCHLINE WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS PURCHLINE,
+    (SELECT COUNT(*) FROM SALESLINE WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS SALESLINE,
+    (SELECT COUNT(*) FROM SALESTABLE WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS SALESTABLE,
+    (SELECT COUNT(*) FROM VENDINVOICEJOUR WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM VENDTRANS WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS VENDTRANS,
+    (SELECT COUNT(*) FROM WORKFLOWTRACKINGSTATUSTABLE WHERE isdelete = 1 and lhname='LH_AX_CANADA') AS WORKFLOWTRACKINGSTATUSTABLE;
+===========================================================================================================================================================
+3.Record Count By Max Date
+
+Bronze
+
+SELECT 
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICEJOUR WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.CUSTINVOICEJOUR)) AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.CUSTINVOICETRANS WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.CUSTINVOICETRANS)) AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM fullload.CUSTTABLE WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.CUSTTABLE)) AS CUSTTABLE,
+    (SELECT COUNT(*) FROM fullload.CUSTTRANS WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.CUSTTRANS)) AS CUSTTRANS,
+    (SELECT COUNT(*) FROM fullload.FISCALCALENDARPERIOD WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.FISCALCALENDARPERIOD)) AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM fullload.GENERALJOURNALENTRY WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.GENERALJOURNALENTRY)) AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM fullload.INVENTTRANS WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.INVENTTRANS)) AS INVENTTRANS,
+    (SELECT COUNT(*) FROM fullload.LEDGERJOURNALTRANS WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.LEDGERJOURNALTRANS)) AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM fullload.PURCHLINE WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.PURCHLINE)) AS PURCHLINE,
+    (SELECT COUNT(*) FROM fullload.SALESLINE WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.SALESLINE)) AS SALESLINE,
+    (SELECT COUNT(*) FROM fullload.SALESTABLE WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.SALESTABLE)) AS SALESTABLE,
+    (SELECT COUNT(*) FROM fullload.VENDINVOICEJOUR WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.VENDINVOICEJOUR)) AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM fullload.VENDTRANS WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.VENDTRANS)) AS VENDTRANS,
+    (SELECT COUNT(*) FROM fullload.WORKFLOWTRACKINGSTATUSTABLE WHERE dpcreateddatetime=dpmodifieddatetime and DPCreatedDateTime=(select max (dpcreateddatetime) from fullload.WORKFLOWTRACKINGSTATUSTABLE)) AS WORKFLOWTRACKINGSTATUSTABLE;
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+Silver
+
+SELECT 
+    (SELECT COUNT(*) FROM CUSTINVOICEJOUR WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA'and DPCreatedDateTime=(select max(dpcreateddatetime) from CUSTINVOICEJOUR where lhname='LH_AX_CANADA')) AS CUSTINVOICEJOUR,
+    (SELECT COUNT(*) FROM CUSTINVOICETRANS WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from CUSTINVOICETRANS where lhname='LH_AX_CANADA')) AS CUSTINVOICETRANS,
+    (SELECT COUNT(*) FROM CUSTTABLE WHERE dpcreateddatetime=dpmodifieddatetime   and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from CUSTTABLE  where lhname='LH_AX_CANADA')) AS CUSTTABLE,
+    (SELECT COUNT(*) FROM CUSTTRANS WHERE dpcreateddatetime=dpmodifieddatetime   and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from CUSTTRANS where lhname='LH_AX_CANADA')) AS CUSTTRANS,
+    (SELECT COUNT(*) FROM FISCALCALENDARPERIOD WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from FISCALCALENDARPERIOD where lhname='LH_AX_CANADA')) AS FISCALCALENDARPERIOD,
+    (SELECT COUNT(*) FROM GENERALJOURNALENTRY WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from GENERALJOURNALENTRY where lhname='LH_AX_CANADA')) AS GENERALJOURNALENTRY,
+    (SELECT COUNT(*) FROM INVENTTRANS WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from INVENTTRANS where lhname='LH_AX_CANADA')) AS INVENTTRANS,
+    (SELECT COUNT(*) FROM LEDGERJOURNALTRANS WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA'  and DPCreatedDateTime=(select max(dpcreateddatetime) from LEDGERJOURNALTRANS where lhname='LH_AX_CANADA')) AS LEDGERJOURNALTRANS,
+    (SELECT COUNT(*) FROM PURCHLINE WHERE dpcreateddatetime=dpmodifieddatetime  and lhname='LH_AX_CANADA'and DPCreatedDateTime=(select max(dpcreateddatetime) from PURCHLINE where lhname='LH_AX_CANADA')) AS PURCHLINE,
+    (SELECT COUNT(*) FROM SALESLINE WHERE dpcreateddatetime=dpmodifieddatetime  and lhname='LH_AX_CANADA'and DPCreatedDateTime=(select max(dpcreateddatetime) from SALESLINE where lhname='LH_AX_CANADA')) AS SALESLINE,
+    (SELECT COUNT(*) FROM SALESTABLE WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from SALESTABLE where lhname='LH_AX_CANADA')) AS SALESTABLE,
+    (SELECT COUNT(*) FROM VENDINVOICEJOUR WHERE dpcreateddatetime=dpmodifieddatetime  and lhname='LH_AX_CANADA'and DPCreatedDateTime=(select max(dpcreateddatetime) from VENDINVOICEJOUR where lhname='LH_AX_CANADA')) AS VENDINVOICEJOUR,
+    (SELECT COUNT(*) FROM VENDTRANS WHERE dpcreateddatetime=dpmodifieddatetime and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from VENDTRANS where lhname='LH_AX_CANADA')) AS VENDTRANS,
+    (SELECT COUNT(*) FROM WORKFLOWTRACKINGSTATUSTABLE WHERE dpcreateddatetime=dpmodifieddatetime  and lhname='LH_AX_CANADA' and DPCreatedDateTime=(select max(dpcreateddatetime) from WORKFLOWTRACKINGSTATUSTABLE where lhname='LH_AX_CANADA')) AS WORKFLOWTRACKINGSTATUSTABLE;
+
+============================================================================================================================================================
+4.Inserted Records
+
+Bronze
+
+WITH Combined AS (
+
+    SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICETRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.FISCALCALENDARPERIOD
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.INVENTTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.PURCHLINE
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESLINE
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDINVOICEJOUR
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+Note: 
+
+Silver: using the got the recid and recversion in the above bronze example((5637295219,5637286101))
+
+WITH Combined AS (
+
+    SELECT 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637295219,
+5637286101)
+ 
+ 
+    UNION ALL
+
+    SELECT 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTINVOICETRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637338329,
+5637338330)
+    
+
+    UNION ALL
+
+    SELECT 'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637174838,
+5637174848)
+   
+
+    UNION ALL
+
+    SELECT  'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada'and recid IN (5637321651,
+5637321642)
+  
+
+    UNION ALL
+
+    SELECT 'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.FISCALCALENDARPERIOD
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637147826,
+5637147827)
+    
+
+    UNION ALL
+
+    SELECT 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637641275,
+5637641294)
+  
+
+    UNION ALL
+
+    SELECT  'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.INVENTTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637551099,
+5637555819)
+    
+
+    UNION ALL
+
+    SELECT 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637675596,
+5637676720)
+   
+
+    UNION ALL
+
+    SELECT  'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.PURCHLINE
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637202444,
+5637202445)
+  
+
+    UNION ALL
+
+    SELECT  'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.SALESLINE
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada'and recid IN (5637240837,
+5637240838)
+   
+
+    UNION ALL
+
+    SELECT  'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.SALESTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada'and recid IN (5637225481,
+5637226087)
+    
+
+    UNION ALL
+
+    SELECT  'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.VENDINVOICEJOUR
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada'and recid IN (5637261506,
+5637262119)
+   
+
+    UNION ALL
+
+    SELECT 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.VENDTRANS
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637440390,
+5637440685)
+   
+
+    UNION ALL
+
+    SELECT  'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime = dpmodifieddatetime AND lhname = 'lh_ax_canada' and recid IN (5637171576,
+5637171586)
+   
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+
+==============================================================================================================================================
+5.DP Date Format
+
+Note: Silver- This can check only on silver side
+
+DECLARE @Schema SYSNAME = 'dbo';
+DECLARE @SQL NVARCHAR(MAX) = N'';
+
+SELECT @SQL = @SQL + '
+SELECT 
+    ''' + t.TABLE_NAME + ''' AS TableName,
+    COUNT(*) AS TotalRows,
+
+    ' + 
+    -- DpCreatedDateTime
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS c
+            WHERE c.TABLE_SCHEMA = t.TABLE_SCHEMA
+              AND c.TABLE_NAME = t.TABLE_NAME
+              AND c.COLUMN_NAME = 'DpCreatedDateTime'
+        )
+        THEN '
+        SUM(CASE WHEN DpCreatedDateTime IS NULL THEN 1 ELSE 0 END) AS Null_DpCreatedDateTime,
+        SUM(CASE WHEN DpCreatedDateTime IS NOT NULL 
+                 AND (LEN(DpCreatedDateTime) <> 19 
+                      OR TRY_CONVERT(datetime2(0), DpCreatedDateTime) IS NULL
+                      OR DpCreatedDateTime NOT LIKE ''[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'')
+            THEN 1 ELSE 0 END) AS InvalidFormat_DpCreatedDateTime,
+        '
+        ELSE '
+        NULL AS Null_DpCreatedDateTime,
+        NULL AS InvalidFormat_DpCreatedDateTime,
+        '
+    END +
+
+    -- DpModifiedDateTime
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS c
+            WHERE c.TABLE_SCHEMA = t.TABLE_SCHEMA
+              AND c.TABLE_NAME = t.TABLE_NAME
+              AND c.COLUMN_NAME = 'DpModifiedDateTime'
+        )
+        THEN '
+        SUM(CASE WHEN DpModifiedDateTime IS NULL THEN 1 ELSE 0 END) AS Null_DpModifiedDateTime,
+        SUM(CASE WHEN DpModifiedDateTime IS NOT NULL 
+                 AND (LEN(DpModifiedDateTime) <> 19 
+                      OR TRY_CONVERT(datetime2(0), DpModifiedDateTime) IS NULL
+                      OR DpModifiedDateTime NOT LIKE ''[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]'')
+            THEN 1 ELSE 0 END) AS InvalidFormat_DpModifiedDateTime
+        '
+        ELSE '
+        NULL AS Null_DpModifiedDateTime,
+        NULL AS InvalidFormat_DpModifiedDateTime
+        '
+    END + '
+FROM [' + @Schema + '].[' + t.TABLE_NAME + ']
+UNION ALL '
+FROM INFORMATION_SCHEMA.TABLES t
+WHERE t.TABLE_TYPE = 'BASE TABLE'
+  AND t.TABLE_SCHEMA = @Schema
+  AND t.TABLE_NAME NOT IN (
+        'enum','enum_1','financeglobaldimensionvalues','customertype',
+        'department','costcenter','[_temp_watermark_staging]',
+        'Exceedeed_Fields_lengths','Exceedeed_Fields_lengths_all'
+  );
+
+-- Remove trailing UNION ALL
+SET @SQL = LEFT(@SQL, LEN(@SQL) - 11);
+
+-- Debug if needed
+-- PRINT @SQL;
+
+EXEC sys.sp_executesql @SQL;
+
+==========================================================================================================================================
+6.Updated Records
+
+Bronze
+
+WITH Combined AS (
+
+    SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICETRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.FISCALCALENDARPERIOD
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.INVENTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.PURCHLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime
+    ORDER BY dpmodifieddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+--------------------------------------------------------------------------------------------------------------------------------------------------
+Silver:
+
+
+WITH Combined AS (
+
+    SELECT  'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT   'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTINVOICETRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.CUSTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.FISCALCALENDARPERIOD
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.INVENTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.PURCHLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.SALESLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.SALESTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.VENDINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.VENDTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT  'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM dbo.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and recid in (5637367411, 5637367361) and lhname = 'lh_ax_EastEUR'
+
+    ORDER BY dpmodifieddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+============================================================================================================================================================
+
+7.DP Modified For Deleted
+
+Bronze
+
+
+WITH Combined AS (
+
+    SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTINVOICETRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.CUSTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.FISCALCALENDARPERIOD
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.INVENTTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.PURCHLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESLINE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.SALESTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDINVOICEJOUR
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.VENDTRANS
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+    FROM fullload.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1
+    ORDER BY dpmodifieddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Silver
+
+Enter recid's inside the ()
+
+WITH Combined AS (
+
+   SELECT 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.CUSTINVOICEJOUR
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.CUSTINVOICETRANS
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( )and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT  'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.CUSTTABLE
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.CUSTTRANS
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT  'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.FISCALCALENDARPERIOD
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.GENERALJOURNALENTRY
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.INVENTTRANS
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( 5639137494,5639137495,5639137496,5639137497,5639137498,5639137500,5639137501) 
+   and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.LEDGERJOURNALTRANS
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.PURCHLINE
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT  'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.SALESLINE
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT  'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.SALESTABLE
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.VENDINVOICEJOUR
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.VENDTRANS
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+   UNION ALL
+   SELECT 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete
+   FROM dbo.WORKFLOWTRACKINGSTATUSTABLE
+   WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1 and recid in ( ) and lhname = 'lh_ax_EastEUR'
+   ORDER BY dpmodifieddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpmodifieddatetime DESC;
+
+==================================================================================================================================================
+Deleted Records:
+
+Bronze
+
+WITH Combined AS (					
+					
+SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM fullload.CUSTINVOICEJOUR					
+WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.CUSTINVOICETRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.CUSTTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+ 				
+ SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.CUSTTRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+				
+ SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.GENERALJOURNALENTRY					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM fullload.INVENTTRANS					
+WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+				
+UNION ALL					
+				
+SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM fullload.LEDGERJOURNALTRANS					
+WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.PURCHLINE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.SALESLINE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.SALESTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.VENDINVOICEJOUR					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.VENDTRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM fullload.WORKFLOWTRACKINGSTATUSTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+)					
+					
+SELECT *					
+FROM Combined					
+ORDER BY TableName, dpcreateddatetime DESC;	
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Silver
+
+Based on recid write a query for silver
+
+==========================================================================================================================================================================
+DP Modified date for Delete:
+
+Bronze
+
+WITH Combined AS (					
+					
+    SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.CUSTINVOICEJOUR					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.CUSTINVOICETRANS					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.CUSTTABLE					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.CUSTTRANS					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'FISCALCALENDARPERIOD', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.FISCALCALENDARPERIOD					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.GENERALJOURNALENTRY					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.INVENTTRANS					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.LEDGERJOURNALTRANS					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.PURCHLINE					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.SALESLINE					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.SALESTABLE					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.VENDINVOICEJOUR					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.VENDTRANS					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+					
+    UNION ALL					
+					
+    SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime, dpmodifieddatetime, isdelete					
+    FROM LH_AX_CANADA.fullload.WORKFLOWTRACKINGSTATUSTABLE					
+    WHERE dpcreateddatetime <> dpmodifieddatetime and isdelete=1					
+    ORDER BY dpmodifieddatetime DESC					
+)					
+					
+SELECT *					
+FROM Combined					
+ORDER BY TableName, dpmodifieddatetime DESC;	
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Silver:
+
+
+
+
+=================================================================================================================================================================
+
+Validate is delete:
+
+WITH Combined AS (
+
+    SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.CUSTINVOICEJOUR
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.CUSTINVOICETRANS
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.CUSTTABLE
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.CUSTTRANS
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+
+    SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.GENERALJOURNALENTRY
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.INVENTTRANS
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.LEDGERJOURNALTRANS
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.PURCHLINE
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.SALESLINE
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.SALESTABLE
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.VENDINVOICEJOUR
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.VENDTRANS
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+
+    UNION ALL
+
+    SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete
+    FROM LH_AX_CANADA.fullload.WORKFLOWTRACKINGSTATUSTABLE
+    WHERE dpcreateddatetime<>dpmodifieddatetime  and isdelete=1
+    ORDER BY dpcreateddatetime DESC
+)
+
+SELECT *
+FROM Combined
+ORDER BY TableName, dpcreateddatetime DESC;
+
+
+
+Deleted Records:
+
+
+WITH Combined AS (					
+					
+SELECT TOP 10 percent 'CUSTINVOICEJOUR' AS TableName, recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM LH_AX_CANADA.fullload.CUSTINVOICEJOUR					
+WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'CUSTINVOICETRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.CUSTINVOICETRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'CUSTTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.CUSTTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+ 				
+ SELECT TOP 10 percent 'CUSTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.CUSTTRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+				
+ SELECT TOP 10 percent 'GENERALJOURNALENTRY', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.GENERALJOURNALENTRY					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'INVENTTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM LH_AX_CANADA.fullload.INVENTTRANS					
+WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+				
+UNION ALL					
+				
+SELECT TOP 10 percent 'LEDGERJOURNALTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+FROM LH_AX_CANADA.fullload.LEDGERJOURNALTRANS					
+WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'PURCHLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.PURCHLINE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'SALESLINE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.SALESLINE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'SALESTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.SALESTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+					
+ SELECT TOP 10 percent 'VENDINVOICEJOUR', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.VENDINVOICEJOUR					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+				
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'VENDTRANS', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.VENDTRANS					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+					
+ UNION ALL					
+				
+ SELECT TOP 10 percent 'WORKFLOWTRACKINGSTATUSTABLE', recid, recversion, dpcreateddatetime,dpmodifieddatetime, isdelete					
+ FROM LH_AX_CANADA.fullload.WORKFLOWTRACKINGSTATUSTABLE					
+ WHERE dpcreateddatetime<>dpmodifieddatetime and isdelete=1					
+ ORDER BY dpcreateddatetime DESC					
+)					
+					
+SELECT *					
+FROM Combined					
+ORDER BY TableName, dpcreateddatetime DESC;					
+
+								
