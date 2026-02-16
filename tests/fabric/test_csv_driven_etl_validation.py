@@ -90,7 +90,6 @@ class TestCSVDrivenETLValidation:
                 )
                 return {
                     'status': 'PASSED',
-                    'validation_type': 'row_count_comparison',
                     'source_count': source_count,
                     'target_count': target_count,
                     'message': f'Row counts match: {source_count}'
@@ -104,7 +103,6 @@ class TestCSVDrivenETLValidation:
                 if missing_recids:
                     return {
                         'status': 'FAILED',
-                        'validation_type': 'duplicate_checks_primary_keys',
                         'source_count': len(source_recids),
                         'target_count': len(target_recids),
                         'missing_count': len(missing_recids),
@@ -114,51 +112,78 @@ class TestCSVDrivenETLValidation:
                 
                 return {
                     'status': 'PASSED',
-                    'validation_type': 'duplicate_checks_primary_keys',
                     'source_count': len(source_recids),
                     'target_count': len(source_recids),
                     'matched_count': len(source_recids),
                     'message': f'All {len(source_recids)} recids found in target'
                 }
             
-            elif validation_type == 'aggregate_validations':
-                source_value = list(source_data[0].values())[0] if source_data else 0
-                target_value = list(target_data[0].values())[0] if target_data else 0
-                
-                if abs(source_value - target_value) < 0.01:
+            elif validation_type == 'record_level_dataframe_comparison':
+                key_columns = ['recid']
+                if source_data and target_data:
+                    # Multi-table queries can share recid values across tables.
+                    # Use composite key when TableName exists to avoid false mismatches.
+                    source_cols = set(source_data[0].keys()) if hasattr(source_data[0], 'keys') else set()
+                    target_cols = set(target_data[0].keys()) if hasattr(target_data[0], 'keys') else set()
+                    if 'TableName' in source_cols and 'TableName' in target_cols:
+                        key_columns = ['TableName', 'recid']
+
+                # Insert-record validations use recid subset filters in target query.
+                # For this scenario, validate source keys are present in target keys
+                # and do not fail on additional target rows outside the sampled source.
+                target_query = str(test_case.get('target_query', ''))
+                if '{recid_list}' in target_query:
+                    source_df = self.validator._to_dataframe(source_data, dataset_name='source_data')
+                    target_df = self.validator._to_dataframe(target_data, dataset_name='target_data')
+
+                    source_keys = set(map(tuple, source_df[key_columns].drop_duplicates().to_records(index=False)))
+                    target_keys = set(map(tuple, target_df[key_columns].drop_duplicates().to_records(index=False)))
+
+                    missing_keys = source_keys - target_keys
+                    if missing_keys:
+                        return {
+                            'status': 'FAILED',
+                            'source_count': len(source_keys),
+                            'target_count': len(target_keys),
+                            'missing_count': len(missing_keys),
+                            'message': f'{len(missing_keys)} source keys missing in target. Sample: {list(missing_keys)[:10]}'
+                        }
+
                     return {
                         'status': 'PASSED',
-                        'validation_type': 'aggregate_validations',
-                        'source_value': source_value,
-                        'target_value': target_value,
-                        'message': f'Aggregates match: {source_value}'
+                        'source_count': len(source_keys),
+                        'target_count': len(target_keys),
+                        'matched_count': len(source_keys),
+                        'message': f'All {len(source_keys)} source keys found in target'
                     }
-                else:
-                    return {
-                        'status': 'FAILED',
-                        'validation_type': 'aggregate_validations',
-                        'source_value': source_value,
-                        'target_value': target_value,
-                        'message': f'Aggregate mismatch: Source={source_value}, Target={target_value}'
-                    }
+
+                summary = self.validator.record_level_dataframe_comparison(
+                    source_data=source_data,
+                    target_data=target_data,
+                    key_columns=key_columns
+                )
+                return {
+                    'status': 'PASSED',
+                    'source_count': len(source_data),
+                    'target_count': len(target_data),
+                    'matched_count': len(source_data) - summary['missing_in_target_count'],
+                    'message': f'Record comparison passed: {len(source_data)} records validated'
+                }
             
             else:
                 return {
                     'status': 'FAILED',
-                    'validation_type': validation_type,
                     'message': f'Unknown validation type: {validation_type}'
                 }
         
         except AssertionError as e:
             return {
                 'status': 'FAILED',
-                'validation_type': validation_type,
                 'message': str(e)
             }
         except Exception as e:
             return {
                 'status': 'ERROR',
-                'validation_type': validation_type,
                 'message': f'Validation error: {str(e)}'
             }
     
@@ -176,39 +201,37 @@ class TestCSVDrivenETLValidation:
         test_id = test_case['test_id']
         test_name = test_case['test_name']
         description = test_case['description']
-        severity = test_case.get('severity', 'normal')
+        table_name = test_case.get('table_name', 'N/A')
+        validation_type = test_case['validation_type']
         
         allure.dynamic.title(f"{test_id}: {test_name}")
         allure.dynamic.description(description)
-        allure.dynamic.severity(severity)
         
-        with allure.step("Test Configuration"):
-            config_info = f"""Test ID: {test_id}
-Test Name: {test_name}
-Validation Type: {test_case['validation_type']}
-Severity: {severity}"""
-            allure.attach(config_info, name='Test Configuration', 
-                         attachment_type=allure.attachment_type.TEXT)
+        allure.dynamic.label("Table", table_name)
+        allure.dynamic.label("Validation", validation_type.replace('_', ' ').title())
         
         result = self._execute_validation(test_case)
         
-        # Add custom parameters for graphs
-        allure.dynamic.parameter("Validation Type", result.get('validation_type', 'N/A'))
-        
-        if 'source_count' in result:
-            allure.dynamic.parameter("Source Count", result['source_count'])
-        if 'target_count' in result:
-            allure.dynamic.parameter("Target Count", result['target_count'])
-        if 'source_value' in result:
-            allure.dynamic.parameter("Source Value", result['source_value'])
-        if 'target_value' in result:
-            allure.dynamic.parameter("Target Value", result['target_value'])
-        if 'matched_count' in result:
-            allure.dynamic.parameter("Matched Records", result['matched_count'])
+        if 'source_count' in result and 'target_count' in result:
+            allure.dynamic.label("Source_Count", str(result['source_count']))
+            allure.dynamic.label("Target_Count", str(result['target_count']))
+            allure.dynamic.label("Match_Status", f"S:{result['source_count']}=T:{result['target_count']}")
         
         with allure.step("Validation Results"):
-            allure.attach(str(result), name='Validation Result', 
-                         attachment_type=allure.attachment_type.JSON)
+            result_summary = f"""Table: {table_name}
+Validation: {validation_type}
+Status: {result['status']}
+Message: {result.get('message')}"""
+            
+            if 'source_count' in result:
+                result_summary += f"\nSource Count: {result['source_count']}"
+            if 'target_count' in result:
+                result_summary += f"\nTarget Count: {result['target_count']}"
+            if 'matched_count' in result:
+                result_summary += f"\nMatched Records: {result['matched_count']}"
+            
+            allure.attach(result_summary, name='Validation Summary', 
+                         attachment_type=allure.attachment_type.TEXT)
         
         assert result['status'] == 'PASSED', result.get('message', 'Validation failed')
         print(f"PASS: {test_id}: {result.get('message', 'PASSED')}")
