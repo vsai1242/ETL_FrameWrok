@@ -43,6 +43,22 @@ class TestCSVDrivenETLValidation:
     def _extract_variables_from_query(query: str) -> List[str]:
         """Extract variable names from query"""
         return re.findall(r'\{(\w+)\}', query)
+
+    @staticmethod
+    def _derive_table_name(test_case: Dict) -> str:
+        """Derive table name from CSV or source query when not explicitly provided."""
+        explicit_table = str(test_case.get('table_name', '')).strip()
+        if explicit_table and explicit_table.upper() != 'N/A':
+            return explicit_table
+
+        source_query = str(test_case.get('source_query', ''))
+        if 'WITH Combined AS' in source_query.upper():
+            return 'MULTI_TABLE'
+
+        match = re.search(r'FROM\s+([A-Za-z0-9_\.\[\]]+)', source_query, flags=re.IGNORECASE)
+        if match:
+            return match.group(1)
+        return 'N/A'
     
     def _execute_validation(self, test_case: Dict) -> Dict[str, Any]:
         """Execute validation based on test case configuration"""
@@ -84,7 +100,9 @@ class TestCSVDrivenETLValidation:
         """Run specific validation type"""
         
         try:
-            if validation_type == 'row_count_comparison':
+            normalized_validation = str(validation_type).strip().lower()
+
+            if normalized_validation == 'row_count_comparison':
                 source_count, target_count = self.validator.row_count_comparison(
                     source_data, target_data
                 )
@@ -95,7 +113,7 @@ class TestCSVDrivenETLValidation:
                     'message': f'Row counts match: {source_count}'
                 }
             
-            elif validation_type == 'duplicate_checks_primary_keys':
+            elif normalized_validation in ('duplicate_checks_primary_keys', 'insert_record_validation'):
                 source_recids = set(row['recid'] for row in source_data)
                 target_recids = set(row['recid'] for row in target_data)
                 missing_recids = source_recids - target_recids
@@ -118,7 +136,7 @@ class TestCSVDrivenETLValidation:
                     'message': f'All {len(source_recids)} recids found in target'
                 }
             
-            elif validation_type == 'record_level_dataframe_comparison':
+            elif normalized_validation in ('record_level_dataframe_comparison', 'insert_record_validation_group'):
                 key_columns = ['recid']
                 if source_data and target_data:
                     # Multi-table queries can share recid values across tables.
@@ -201,7 +219,7 @@ class TestCSVDrivenETLValidation:
         test_id = test_case['test_id']
         test_name = test_case['test_name']
         description = test_case['description']
-        table_name = test_case.get('table_name', 'N/A')
+        table_name = self._derive_table_name(test_case)
         validation_type = test_case['validation_type']
         
         allure.dynamic.title(f"{test_id}: {test_name}")

@@ -62,6 +62,48 @@ class PredefinedValidations:
         source_df = PredefinedValidations._to_dataframe(source_data, dataset_name="source_data")
         target_df = PredefinedValidations._to_dataframe(target_data, dataset_name="target_data")
 
+        # Handle aggregate count queries (for example, SELECT COUNT(*)) that return
+        # a single row where the cell values are the actual record counts.
+        if (
+            len(source_df) == 1
+            and len(target_df) == 1
+            and source_df.shape[1] == target_df.shape[1]
+        ):
+            source_numeric = source_df.apply(pd.to_numeric, errors="coerce")
+            target_numeric = target_df.apply(pd.to_numeric, errors="coerce")
+
+            if not source_numeric.isna().any().any() and not target_numeric.isna().any().any():
+                source_values = source_numeric.iloc[0].tolist()
+                target_values = target_numeric.iloc[0].tolist()
+
+                mismatches: List[str] = []
+                if list(source_df.columns) == list(target_df.columns):
+                    for col, source_value, target_value in zip(
+                        source_df.columns, source_values, target_values
+                    ):
+                        if int(source_value) != int(target_value):
+                            mismatches.append(
+                                f"{col}: source={int(source_value)}, target={int(target_value)}"
+                            )
+                else:
+                    for idx, (source_value, target_value) in enumerate(
+                        zip(source_values, target_values), start=1
+                    ):
+                        if int(source_value) != int(target_value):
+                            mismatches.append(
+                                f"col#{idx}: source={int(source_value)}, target={int(target_value)}"
+                            )
+
+                if mismatches:
+                    raise AssertionError(
+                        "Row count mismatch in aggregate query: "
+                        + " | ".join(mismatches[:10])
+                    )
+
+                source_count = int(sum(source_values))
+                target_count = int(sum(target_values))
+                return source_count, target_count
+
         source_count = len(source_df)
         target_count = len(target_df)
 
