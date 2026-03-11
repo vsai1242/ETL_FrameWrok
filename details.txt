@@ -286,3 +286,25 @@ Enables business users to manage tests
 Separates test logic from test control
 
 It's like a remote control for your entire testing framework! 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fabric: 
+
+generate report: 
+
+client bronze to silver: 
+1. python .\scripts\generate_client_html_report.py (to share custome report)
+2. F:\Frameworks\ETL_testing\allure-2.32.0\bin\allure.bat generate F:\Frameworks\ETL_testing\reports\allure-results --single-file -o F:\Frameworks\ETL_testing\reports\client-allure-single --clean (to share allure)
+3. .\allure-2.32.0\bin\allure.bat serve reports\allure-results (for allure)
+4. python -m pytest tests/fabric/test_csv_driven_etl_validation.py -v -s (to run)

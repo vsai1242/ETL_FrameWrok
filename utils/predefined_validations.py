@@ -47,12 +47,22 @@ class PredefinedValidations:
 
     @staticmethod
     def _normalize_series(series: pd.Series) -> pd.Series:
-        """Normalize values for deterministic comparisons (NaN-safe, whitespace-safe)."""
+        """Normalize values for deterministic comparisons (NaN-safe, whitespace-safe, numeric-safe)."""
+
+        # Try numeric conversion first
+        numeric_series = pd.to_numeric(series, errors="coerce")
+
+        # If conversion succeeded for most values, treat as numeric
+        if numeric_series.notna().sum() >= len(series) * 0.8:
+            return numeric_series
+
+        # Datetime handling
         if pd.api.types.is_datetime64_any_dtype(series):
             return pd.to_datetime(series, errors="coerce")
 
+        # Object handling
         if pd.api.types.is_object_dtype(series):
-            return series.astype(str).str.strip().replace({"nan": pd.NA, "None": pd.NA})
+            return series.astype(str).str.strip()
 
         return series
 
@@ -199,17 +209,54 @@ class PredefinedValidations:
         return result
 
     @staticmethod
-    def null_checks_mandatory_columns(data: DataLike, mandatory_columns: Sequence[str]) -> Dict[str, int]:
-        """Validate mandatory columns do not contain NULL values."""
+    def null_checks_mandatory_columns(
+        data: DataLike,
+        mandatory_columns: Sequence[str],
+        treat_blank_as_null: bool = True,
+    ) -> Dict[str, int]:
+        """
+        Validate mandatory columns do not contain NULL values.
+
+        Enhancements:
+        - Fails if dataset is empty
+        - Optionally treats blank strings as NULL
+        - Provides detailed failure message with row count
+        """
         df = PredefinedValidations._to_dataframe(data, dataset_name="data")
         PredefinedValidations._assert_columns_exist(df, mandatory_columns, "data")
 
-        null_counts = {col: int(df[col].isna().sum()) for col in mandatory_columns}
-        failing = {col: cnt for col, cnt in null_counts.items() if cnt > 0}
+        if df.empty:
+            raise AssertionError("Dataset is empty; cannot validate NULL constraints.")
 
-        if failing:
-            raise AssertionError(f"Mandatory NULL check failed: {failing}")
-        return null_counts
+        working_df = df.copy()
+
+        if treat_blank_as_null:
+            # Replace empty or whitespace-only strings with NA
+            working_df[mandatory_columns] = working_df[mandatory_columns].replace(
+                r'^\s*$', pd.NA, regex=True
+            )
+
+        null_counts = {
+            col: int(working_df[col].isna().sum())
+            for col in mandatory_columns
+        }
+
+        failing = {col: cnt for col, cnt in null_counts.items() if cnt > 0}
+        
+        total_rows = len(df)
+        
+        if failing:            
+            raise AssertionError(
+                f"Mandatory NULL check failed in {sum(failing.values())} cells "
+                f"across {total_rows} rows. Column-wise NULL counts: {failing}"
+            )
+
+        return {
+            "total_rows_verified": total_rows,
+            "validated_columns": list(mandatory_columns),
+            "null_counts": null_counts
+        }
+
 
     @staticmethod
     def duplicate_checks_primary_keys(data: DataLike, primary_keys: Sequence[str]) -> int:
@@ -223,6 +270,54 @@ class PredefinedValidations:
                 f"Duplicate check failed: found {duplicate_count} duplicate rows on keys {list(primary_keys)}."
             )
         return duplicate_count
+
+    @staticmethod
+    def soft_delete_consistency(
+        source_data: DataLike,
+        target_data: DataLike,
+        key_columns: Sequence[str],
+        delete_column: str = "isdelete",
+        max_mismatch_rows: int = 10,
+    ) -> Dict[str, Any]:
+        """Validate delete-flag consistency between source and target by business key."""
+        source_df = PredefinedValidations._to_dataframe(source_data, dataset_name="source_data")
+        target_df = PredefinedValidations._to_dataframe(target_data, dataset_name="target_data")
+
+        required_source_cols = list(key_columns) + [delete_column]
+        required_target_cols = list(key_columns) + [delete_column]
+        PredefinedValidations._assert_columns_exist(source_df, required_source_cols, "source_data")
+        PredefinedValidations._assert_columns_exist(target_df, required_target_cols, "target_data")
+
+        source_view = source_df[required_source_cols].copy()
+        target_view = target_df[required_target_cols].copy()
+
+        merge_df = source_view.merge(
+            target_view,
+            on=list(key_columns),
+            how="inner",
+            suffixes=("_source", "_target"),
+        )
+
+        source_col = f"{delete_column}_source"
+        target_col = f"{delete_column}_target"
+        left = pd.to_numeric(merge_df[source_col], errors="coerce")
+        right = pd.to_numeric(merge_df[target_col], errors="coerce")
+        mismatch_mask = ~(left.eq(right) | (left.isna() & right.isna()))
+
+        mismatches = merge_df.loc[
+            mismatch_mask, list(key_columns) + [source_col, target_col]
+        ].head(max_mismatch_rows)
+
+        summary = {
+            "joined_row_count": int(len(merge_df)),
+            "mismatch_count": int(mismatch_mask.sum()),
+            "sample_mismatches": mismatches.to_dict(orient="records"),
+        }
+
+        if summary["mismatch_count"] > 0:
+            raise AssertionError(f"Soft delete consistency failed: {summary}")
+
+        return summary
 
     @staticmethod
     def aggregate_validations(
@@ -568,6 +663,67 @@ class PredefinedValidations:
         if row_count == 0:
             raise AssertionError(f"{dataset_name} is empty; expected at least one row.")
         return row_count
+    @staticmethod
+    def group_by_distribution_validation(
+        source_data: DataLike,
+        target_data: DataLike,
+        group_columns: Sequence[str],
+        tolerance: float = 0.0,
+    ) -> Dict[str, Any]:
+        """
+        Validate grouped distribution between source and target datasets.
+
+        Example:
+            group_columns = ['isdelete']
+            group_columns = ['status']
+            group_columns = ['fiscalyear','company']
+
+        tolerance:
+            Allowed percentage difference per group.
+        """
+        source_df = PredefinedValidations._to_dataframe(source_data, dataset_name="source_data")
+        target_df = PredefinedValidations._to_dataframe(target_data, dataset_name="target_data")
+
+        PredefinedValidations._assert_columns_exist(source_df, group_columns, "source_data")
+        PredefinedValidations._assert_columns_exist(target_df, group_columns, "target_data")
+
+        source_group = source_df.groupby(list(group_columns)).size().reset_index(name="source_count")
+        target_group = target_df.groupby(list(group_columns)).size().reset_index(name="target_count")
+
+        merged = source_group.merge(
+            target_group,
+            on=list(group_columns),
+            how="outer"
+        ).fillna(0)
+
+        mismatches = []
+
+        for _, row in merged.iterrows():
+            source_count = float(row["source_count"])
+            target_count = float(row["target_count"])
+
+            if source_count == 0 and target_count == 0:
+                continue
+
+            if source_count == 0 and target_count != 0:
+                mismatches.append(dict(row))
+                continue
+
+            percentage_diff = abs(target_count - source_count) / source_count * 100
+
+            if percentage_diff > tolerance:
+                mismatches.append(dict(row))
+
+        if mismatches:
+            raise AssertionError(
+                f"Group distribution validation failed. Sample mismatches: {mismatches[:10]}"
+            )
+
+        return {
+            "group_count": len(merged),
+            "message": "Group distribution validation passed"
+        }
+
 
     @staticmethod
     def custom_column_comparison(
