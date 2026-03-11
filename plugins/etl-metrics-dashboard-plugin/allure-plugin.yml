@@ -1,0 +1,8 @@
+﻿id: etl-metrics-dashboard
+name: ETL Metrics Dashboard
+description: Bronze vs Silver ETL metrics dashboard powered by Chart.js
+jsFiles:
+  - chart.umd.min.js
+  - index.js
+cssFiles:
+  - styles.css

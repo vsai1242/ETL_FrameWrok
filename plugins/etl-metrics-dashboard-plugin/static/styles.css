@@ -1,0 +1,25 @@
+﻿.etl-metrics-dashboard {
+    padding: 16px;
+}
+
+.etl-metrics-dashboard__card {
+    background: #f3f5f7;
+    border: 1px solid #dce2e8;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.etl-metrics-dashboard__canvas-wrap {
+    position: relative;
+    min-height: 640px;
+    background: #ececec;
+    border: 1px solid #d0d4d9;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.etl-metrics-dashboard__message {
+    margin-top: 10px;
+    color: #5a6169;
+    font-size: 13px;
+}

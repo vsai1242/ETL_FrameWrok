@@ -2,7 +2,9 @@ import pytest
 import allure
 import pandas as pd
 import re
+from pathlib import Path
 from typing import Dict, List, Any
+from openpyxl import load_workbook
 from utils.fabric_client import FabricClient
 from utils.predefined_validations import PredefinedValidations
 
@@ -10,6 +12,8 @@ from utils.predefined_validations import PredefinedValidations
 @allure.feature("CSV-Driven ETL Validation")
 class TestCSVDrivenETLValidation:
     """CSV-Driven ETL Validation - Manual testers control tests via CSV"""
+    METADATA_FILE = Path("data/COLUMNS_2.xlsx")
+    _metadata_cache = None
     
     @classmethod
     def setup_class(cls):
@@ -18,6 +22,14 @@ class TestCSVDrivenETLValidation:
         cls.target_client = FabricClient('SILVER')
         cls.validator = PredefinedValidations()
         cls.test_cases = cls._load_test_cases()
+
+    @classmethod
+    def teardown_class(cls):
+        """Close shared Fabric connections after the test class completes."""
+        if getattr(cls, 'source_client', None):
+            cls.source_client.close()
+        if getattr(cls, 'target_client', None):
+            cls.target_client.close()
     
     @classmethod
     def _load_test_cases(cls) -> List[Dict]:
@@ -27,7 +39,79 @@ class TestCSVDrivenETLValidation:
         df = df.fillna('')
         df['enabled'] = df['enabled'].astype(str)
         enabled_df = df[df['enabled'].str.upper() == 'TRUE']
-        return enabled_df.to_dict('records')
+        expanded_cases: List[Dict[str, Any]] = []
+        for row in enabled_df.to_dict('records'):
+            expanded_cases.extend(cls._expand_lakehouse_test_cases(row))
+        return expanded_cases
+
+    @staticmethod
+    def _split_csv_values(raw: Any) -> List[str]:
+        value = str(raw or '').strip()
+        if not value:
+            return []
+        return [item.strip() for item in value.split(',') if item.strip()]
+
+    @classmethod
+    def _expand_lakehouse_test_cases(cls, test_case: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Expand one CSV row into one or more rows for multiple lakehouse inputs."""
+        source_values = cls._split_csv_values(test_case.get('source_lakehouse', ''))
+        target_values = cls._split_csv_values(test_case.get('target_lakehouse', ''))
+        lhname_values = cls._split_csv_values(test_case.get('target_lhname_value', ''))
+
+        if not source_values:
+            source_values = ['']
+        if not target_values:
+            target_values = ['']
+
+        if len(source_values) == len(target_values):
+            pairs = list(zip(source_values, target_values))
+        elif len(source_values) == 1:
+            pairs = [(source_values[0], target) for target in target_values]
+        elif len(target_values) == 1:
+            pairs = [(source, target_values[0]) for source in source_values]
+        else:
+            test_id = str(test_case.get('test_id', '<unknown>'))
+            raise ValueError(
+                f"Invalid lakehouse mapping for {test_id}: source_lakehouse has {len(source_values)} values "
+                f"but target_lakehouse has {len(target_values)}. Use same count or one side as a single value."
+            )
+
+        lhname_per_pair: List[str] = []
+        if not lhname_values:
+            lhname_per_pair = [src for src, _ in pairs]
+        elif len(lhname_values) == len(pairs):
+            lhname_per_pair = list(lhname_values)
+        elif len(lhname_values) == 1 and len(pairs) > 1 and lhname_values[0] == source_values[0]:
+            # Backward-compatible behavior: when CSV originally had one source and was expanded later,
+            # keep lhname aligned to each expanded source lakehouse by default.
+            lhname_per_pair = [src for src, _ in pairs]
+        elif len(lhname_values) == 1:
+            lhname_per_pair = [lhname_values[0] for _ in pairs]
+        else:
+            test_id = str(test_case.get('test_id', '<unknown>'))
+            raise ValueError(
+                f"Invalid target_lhname_value mapping for {test_id}: target_lhname_value has "
+                f"{len(lhname_values)} values but expanded pairs count is {len(pairs)}. "
+                "Use one value or one value per expanded pair."
+            )
+
+        if len(pairs) == 1:
+            single = dict(test_case)
+            single['source_lakehouse'] = pairs[0][0]
+            single['target_lakehouse'] = pairs[0][1]
+            single['target_lhname_value'] = lhname_per_pair[0]
+            return [single]
+
+        expanded: List[Dict[str, Any]] = []
+        base_test_id = str(test_case.get('test_id', 'TEST'))
+        for (source_lakehouse, target_lakehouse), lhname_value in zip(pairs, lhname_per_pair):
+            row = dict(test_case)
+            row['source_lakehouse'] = source_lakehouse
+            row['target_lakehouse'] = target_lakehouse
+            row['target_lhname_value'] = lhname_value
+            row['test_id'] = f"{base_test_id}__{source_lakehouse}__{target_lakehouse}"
+            expanded.append(row)
+        return expanded
     
     @staticmethod
     def _resolve_query_variables(query: str, variables: Dict[str, Any]) -> str:
@@ -130,8 +214,13 @@ class TestCSVDrivenETLValidation:
         - target_lhname_value (default: source_lakehouse)
         - source_where, target_where
         """
-        source_query = cls._csv_value(test_case, 'source_query')
-        target_query = cls._csv_value(test_case, 'target_query')
+        source_query = cls._csv_value(test_case, 'source_query') or cls._csv_value(test_case, 'source')
+        target_query = cls._csv_value(test_case, 'target_query') or cls._csv_value(test_case, 'target')
+        if target_query and not source_query and cls._is_target_zero_validation(
+            cls._csv_value(test_case, 'validation_type')
+        ):
+            # Target-only validation: keep source harmless and empty-result.
+            return {'source_query': 'SELECT TOP 0 1 AS dummy', 'target_query': target_query}
         if source_query and target_query:
             return {'source_query': source_query, 'target_query': target_query}
 
@@ -164,15 +253,18 @@ class TestCSVDrivenETLValidation:
 
         if len(tables) == 1:
             table = tables[0]
-            source_query = (
+            generated_source_query = (
                 f"SELECT COUNT(*) AS row_count FROM {source_lakehouse}.{source_schema}.{table}"
                 f"{source_where_clause}"
             )
-            target_query = (
+            generated_target_query = (
                 f"SELECT COUNT(*) AS row_count FROM {target_lakehouse}.{target_schema}.{table}"
                 f"{target_where_clause}"
             )
-            return {'source_query': source_query, 'target_query': target_query}
+            return {
+                'source_query': source_query or generated_source_query,
+                'target_query': target_query or generated_target_query,
+            }
 
         source_parts = []
         target_parts = []
@@ -184,9 +276,12 @@ class TestCSVDrivenETLValidation:
                 f"(SELECT COUNT(*) FROM {target_lakehouse}.{target_schema}.{table}{target_where_clause}) AS {table}"
             )
 
-        source_query = "SELECT " + ", ".join(source_parts)
-        target_query = "SELECT " + ", ".join(target_parts)
-        return {'source_query': source_query, 'target_query': target_query}
+        generated_source_query = "SELECT " + ", ".join(source_parts)
+        generated_target_query = "SELECT " + ", ".join(target_parts)
+        return {
+            'source_query': source_query or generated_source_query,
+            'target_query': target_query or generated_target_query,
+        }
 
     @classmethod
     def _build_query_variables(cls, test_case: Dict) -> Dict[str, Any]:
@@ -197,6 +292,8 @@ class TestCSVDrivenETLValidation:
                 variables[key] = value.strip()
             else:
                 variables[key] = value
+        if not str(variables.get('target_lhname_value', '')).strip():
+            variables['target_lhname_value'] = str(variables.get('source_lakehouse', '')).strip()
         return variables
 
     @classmethod
@@ -206,6 +303,362 @@ class TestCSVDrivenETLValidation:
         if not raw_tables:
             return []
         return [table.strip() for table in raw_tables.split(',') if table.strip()]
+
+    @staticmethod
+    def _count_for_dashboard(data: Any) -> int:
+        """Compute a stable count for dashboard even when validation fails."""
+        try:
+            df = PredefinedValidations._to_dataframe(data, dataset_name='dashboard_data')
+            if len(df) == 1 and df.shape[1] >= 1:
+                numeric_df = df.apply(pd.to_numeric, errors='coerce')
+                if not numeric_df.isna().any().any():
+                    return int(sum(numeric_df.iloc[0].tolist()))
+            return int(len(df))
+        except Exception:
+            return 0
+
+    @staticmethod
+    def _is_recid_based_validation(validation_type: str) -> bool:
+        normalized = str(validation_type).strip().lower()
+        return normalized in {
+            'insert_record_validation',
+            'update_record_validation',
+            'delete_record_validation',
+            'insert_record_validation_group',
+            'update_record_validation_group',
+            'delete_record_validation_group',
+        }
+
+    @staticmethod
+    def _is_target_zero_validation(validation_type: str) -> bool:
+        normalized = str(validation_type).strip().lower()
+        return normalized in {
+            'target_zero_count_validation',
+            'target_zero_records_validation',
+            'target_should_be_zero',
+        }
+
+    @staticmethod
+    def _extract_recid_list(source_results: Any) -> List[Any]:
+        recids: List[Any] = []
+        for row in source_results or []:
+            if hasattr(row, 'get'):
+                recid = row.get('recid')
+                if recid is not None:
+                    recids.append(recid)
+        return recids
+
+    @staticmethod
+    def _count_unique_recids(rows: Any) -> int:
+        """Count unique recids from row objects/dicts."""
+        recids = set()
+        for row in rows or []:
+            if hasattr(row, 'get'):
+                recid = row.get('recid')
+                if recid is not None:
+                    recids.add(recid)
+        return len(recids)
+
+    @staticmethod
+    def _query_uses_recid_list(query: str) -> bool:
+        """Check whether query template depends on {recid_list} placeholder."""
+        return '{recid_list}' in str(query or '')
+
+    @staticmethod
+    def _extract_from_lakehouse(query: str) -> str:
+        """Extract first lakehouse token from FROM clause when present."""
+        match = re.search(
+            r'FROM\s+([A-Za-z0-9_\[\]]+)\.[A-Za-z0-9_\[\]]+\.[A-Za-z0-9_\[\]]+',
+            str(query or ''),
+            flags=re.IGNORECASE
+        )
+        if not match:
+            return ''
+        return match.group(1).strip().strip('[]').upper()
+
+    def _pick_client_for_query(
+        self,
+        query: str,
+        source_lakehouse: str,
+        target_lakehouse: str,
+        default_side: str
+    ):
+        """Pick source/target Fabric client by query lakehouse reference."""
+        query_lakehouse = self._extract_from_lakehouse(query)
+        source_lh = str(source_lakehouse or '').strip().strip('[]').upper()
+        target_lh = str(target_lakehouse or '').strip().strip('[]').upper()
+
+        if query_lakehouse and target_lh and query_lakehouse == target_lh:
+            return self.target_client
+        if query_lakehouse and source_lh and query_lakehouse == source_lh:
+            return self.source_client
+        return self.source_client if default_side == 'source' else self.target_client
+
+    def _execute_queries_with_dynamic_order(
+        self,
+        test_id: str,
+        validation_type: str,
+        source_query: str,
+        target_query: str,
+        source_lakehouse: str = '',
+        target_lakehouse: str = '',
+        label_suffix: str = ''
+    ) -> tuple[Any, Any]:
+        """Execute source/target queries honoring recid dependency direction.
+
+        Default behavior is source -> target. If source_query depends on
+        {recid_list}, execution switches to target -> source.
+        """
+        recid_based = self._is_recid_based_validation(validation_type)
+        source_needs_recid = self._query_uses_recid_list(source_query)
+        target_needs_recid = self._query_uses_recid_list(target_query)
+
+        if source_needs_recid and target_needs_recid:
+            raise AssertionError(
+                "Both source_query and target_query contain {recid_list}. "
+                "Only one side can depend on recid_list."
+            )
+
+        suffix = f" - {label_suffix}" if label_suffix else ""
+        query_variables: Dict[str, Any] = {}
+        source_query_client = self._pick_client_for_query(
+            query=source_query,
+            source_lakehouse=source_lakehouse,
+            target_lakehouse=target_lakehouse,
+            default_side='source'
+        )
+        target_query_client = self._pick_client_for_query(
+            query=target_query,
+            source_lakehouse=source_lakehouse,
+            target_lakehouse=target_lakehouse,
+            default_side='target'
+        )
+
+        def _lakehouse_for_client(client) -> str:
+            if client is self.source_client:
+                return str(source_lakehouse or '<source-unknown>')
+            if client is self.target_client:
+                return str(target_lakehouse or '<target-unknown>')
+            return '<unknown-lakehouse>'
+
+        def _execute_with_context(client, query_text: str, variables: Dict[str, Any], query_side: str):
+            resolved_query = self._resolve_query_variables(query_text, variables)
+            try:
+                return client.execute_query(resolved_query)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"{query_side.capitalize()} query execution failed for test_id={test_id}{suffix}, "
+                    f"lakehouse={_lakehouse_for_client(client)}, error_type={exc.__class__.__name__}, "
+                    f"error={exc}, query={resolved_query}"
+                ) from exc
+
+        if source_needs_recid:
+            with allure.step(f"Execute target query for {test_id}{suffix}"):
+                target_results = _execute_with_context(
+                    target_query_client,
+                    target_query,
+                    {},
+                    'target'
+                )
+                allure.attach(
+                    str(target_results[:10]),
+                    name=f'Target Query Results (sample){suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                recid_list = self._extract_recid_list(target_results)
+                query_variables['recid_list'] = recid_list
+                allure.attach(
+                    str(recid_list[:20]),
+                    name=f'RecID List from Target (first 20){suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                allure.attach(
+                    str(len(set(recid_list))),
+                    name=f'Target RecID Count{suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+
+            with allure.step(f"Execute source query for {test_id}{suffix}"):
+                if recid_based and not query_variables.get('recid_list'):
+                    source_results = []
+                    allure.attach(
+                        "Skipped source query because target returned 0 recids.",
+                        name=f'Source Query Skipped{suffix}',
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+                else:
+                    source_results = _execute_with_context(
+                        source_query_client,
+                        source_query,
+                        query_variables,
+                        'source'
+                    )
+                allure.attach(
+                    str(source_results[:10]),
+                    name=f'Source Query Results (sample){suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                if recid_based:
+                    allure.attach(
+                        str(self._count_unique_recids(source_results)),
+                        name=f'Source RecID Count{suffix}',
+                        attachment_type=allure.attachment_type.TEXT
+                    )
+            return source_results, target_results
+
+        with allure.step(f"Execute source query for {test_id}{suffix}"):
+            source_results = _execute_with_context(
+                source_query_client,
+                source_query,
+                {},
+                'source'
+            )
+            allure.attach(
+                str(source_results[:10]),
+                name=f'Source Query Results (sample){suffix}',
+                attachment_type=allure.attachment_type.TEXT
+            )
+            if target_needs_recid:
+                recid_list = self._extract_recid_list(source_results)
+                query_variables['recid_list'] = recid_list
+                allure.attach(
+                    str(recid_list[:20]),
+                    name=f'RecID List from Source (first 20){suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+                allure.attach(
+                    str(len(set(recid_list))),
+                    name=f'Source RecID Count{suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+
+        with allure.step(f"Execute target query for {test_id}{suffix}"):
+            if recid_based and target_needs_recid and not query_variables.get('recid_list'):
+                target_results = []
+                allure.attach(
+                    "Skipped target query because source returned 0 recids.",
+                    name=f'Target Query Skipped{suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+            else:
+                target_results = _execute_with_context(
+                    target_query_client,
+                    target_query,
+                    query_variables,
+                    'target'
+                )
+            allure.attach(
+                str(target_results[:10]),
+                name=f'Target Query Results (sample){suffix}',
+                attachment_type=allure.attachment_type.TEXT
+            )
+            if recid_based and target_needs_recid:
+                allure.attach(
+                    str(self._count_unique_recids(target_results)),
+                    name=f'Target RecID Count{suffix}',
+                    attachment_type=allure.attachment_type.TEXT
+                )
+        return source_results, target_results
+
+    @staticmethod
+    def _extract_key_set(rows: Any, key_columns: List[str]) -> set:
+        """Build unique key tuples from dict-like rows for provided key columns."""
+        keys = set()
+        for row in rows or []:
+            if not hasattr(row, 'get'):
+                continue
+            if all(col in row for col in key_columns):
+                keys.add(tuple(row.get(col) for col in key_columns))
+        return keys
+
+    @staticmethod
+    def _normalize_sheet_name(raw_name: str) -> str:
+        name = (raw_name or "UNKNOWN").strip()
+        name = re.sub(r"[:\\/?*\[\]]", "_", name)
+        return name[:31] or "UNKNOWN"
+
+    @classmethod
+    def _load_metadata_cache(cls) -> Dict[str, Any]:
+        """Load COLUMNS_2.xlsx and build lookup indexes for table columns."""
+        if cls._metadata_cache is not None:
+            return cls._metadata_cache
+
+        if not cls.METADATA_FILE.exists():
+            raise FileNotFoundError(f"Metadata file not found: {cls.METADATA_FILE}")
+
+        wb = load_workbook(cls.METADATA_FILE, data_only=True)
+        sheet_table_columns: Dict[tuple, List[str]] = {}
+        lakehouse_table_columns: Dict[tuple, List[str]] = {}
+
+        for ws in wb.worksheets:
+            sheet_key = ws.title.strip().upper()
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row:
+                    continue
+                lakehouse = str(row[0]).strip() if row[0] is not None else ""
+                table_name = str(row[1]).strip() if row[1] is not None else ""
+                column_name = str(row[2]).strip() if row[2] is not None else ""
+
+                if (
+                    not lakehouse
+                    or not table_name
+                    or not column_name
+                    or column_name.startswith("<")
+                    or lakehouse.startswith("SOURCE (")
+                    or lakehouse.startswith("TARGET (")
+                ):
+                    continue
+
+                table_upper = table_name.upper()
+                lake_upper = lakehouse.upper()
+
+                sheet_table_key = (sheet_key, table_upper)
+                sheet_table_columns.setdefault(sheet_table_key, [])
+                if column_name not in sheet_table_columns[sheet_table_key]:
+                    sheet_table_columns[sheet_table_key].append(column_name)
+
+                lake_table_key = (lake_upper, table_upper)
+                lakehouse_table_columns.setdefault(lake_table_key, [])
+                if column_name not in lakehouse_table_columns[lake_table_key]:
+                    lakehouse_table_columns[lake_table_key].append(column_name)
+
+        cls._metadata_cache = {
+            "sheet_table_columns": sheet_table_columns,
+            "lakehouse_table_columns": lakehouse_table_columns,
+        }
+        return cls._metadata_cache
+
+    @classmethod
+    def _get_columns_from_excel_metadata(cls, lakehouse: str, table_name: str) -> List[str]:
+        """Get columns for exact lakehouse+table match from COLUMNS_2.xlsx."""
+        cache = cls._load_metadata_cache()
+        table_upper = table_name.strip().upper()
+        lake_upper = lakehouse.strip().upper()
+        sheet_upper = cls._normalize_sheet_name(lakehouse).upper()
+
+        from_sheet = cache["sheet_table_columns"].get((sheet_upper, table_upper), [])
+        if from_sheet:
+            return from_sheet
+
+        from_lakehouse = cache["lakehouse_table_columns"].get((lake_upper, table_upper), [])
+        if from_lakehouse:
+            return from_lakehouse
+
+        raise AssertionError(
+            f"No metadata columns found in {cls.METADATA_FILE} for lakehouse={lakehouse}, table={table_name}."
+        )
+
+    @staticmethod
+    def _build_duplicate_query(lakehouse: str, schema: str, table_name: str, columns: List[str]) -> str:
+        if not columns:
+            raise AssertionError(f"No columns available for duplicate check on table {table_name}.")
+        grouped_columns = ", ".join(f"[{col}]" for col in columns)
+        return (
+            f"SELECT {grouped_columns}, COUNT(*) AS duplicate_count "
+            f"FROM {lakehouse}.{schema}.{table_name} "
+            f"GROUP BY {grouped_columns} "
+            f"HAVING COUNT(*) > 1"
+        )
     
     def _execute_validation(self, test_case: Dict) -> Dict[str, Any]:
         """Execute validation based on test case configuration"""
@@ -215,6 +668,93 @@ class TestCSVDrivenETLValidation:
         query_variables = self._build_query_variables(test_case)
         validation_type = test_case['validation_type']
         table_list = self._get_table_list(test_case)
+        normalized_validation = str(validation_type).strip().lower()
+
+        if normalized_validation == 'duplicate_column_check_using_excel_metadata':
+            source_lakehouse = self._csv_value(test_case, 'source_lakehouse')
+            target_lakehouse = self._csv_value(test_case, 'target_lakehouse', 'LH_Finance') or 'LH_Finance'
+            source_schema = self._csv_value(test_case, 'source_schema', 'fullload') or 'fullload'
+            target_schema = self._csv_value(test_case, 'target_schema', 'dbo') or 'dbo'
+
+            if not table_list:
+                table_name = self._derive_table_name(test_case)
+                if not table_name or table_name == 'N/A':
+                    raise AssertionError("table_name is required for duplicate_column_check_using_excel_metadata.")
+                table_list = [table_name]
+
+            per_table_results = []
+            for table_name in table_list:
+                with allure.step(f"Execute duplicate metadata validation for {test_id} - {table_name}"):
+                    try:
+                        source_columns = self._get_columns_from_excel_metadata(source_lakehouse, table_name)
+                        target_columns = self._get_columns_from_excel_metadata(target_lakehouse, table_name)
+                        source_dup_query = self._build_duplicate_query(source_lakehouse, source_schema, table_name, source_columns)
+                        target_dup_query = self._build_duplicate_query(target_lakehouse, target_schema, table_name, target_columns)
+
+                        allure.attach(source_dup_query, name=f"Source Duplicate Query - {table_name}", attachment_type=allure.attachment_type.TEXT)
+                        allure.attach(target_dup_query, name=f"Target Duplicate Query - {table_name}", attachment_type=allure.attachment_type.TEXT)
+
+                        source_duplicates = self.source_client.execute_query(source_dup_query)
+                        target_duplicates = self.target_client.execute_query(target_dup_query)
+
+                        result = self._run_validation(
+                            validation_type,
+                            source_duplicates,
+                            target_duplicates,
+                            {'table_name': table_name}
+                        )
+                        per_table_results.append({'table_name': table_name, 'result': result})
+                    except Exception as exc:
+                        per_table_results.append(
+                            {
+                                'table_name': table_name,
+                                'result': {
+                                    'status': 'ERROR',
+                                    'source_count': 0,
+                                    'target_count': 0,
+                                    'message': (
+                                        f"Metadata duplicate validation failed for table={table_name}, "
+                                        f"source_lakehouse={source_lakehouse}, target_lakehouse={target_lakehouse}, "
+                                        f"error_type={exc.__class__.__name__}, error={exc}"
+                                    ),
+                                },
+                            }
+                        )
+
+            failed_tables = [item for item in per_table_results if item['result'].get('status') != 'PASSED']
+            table_results = [
+                {
+                    'table_name': item['table_name'],
+                    'status': item['result'].get('status', 'UNKNOWN'),
+                    'source_count': int(item['result'].get('source_count', 0)),
+                    'target_count': int(item['result'].get('target_count', 0)),
+                    'message': item['result'].get('message', ''),
+                }
+                for item in per_table_results
+            ]
+
+            if failed_tables:
+                first_failure = failed_tables[0]
+                return {
+                    'status': first_failure['result'].get('status', 'FAILED'),
+                    'source_count': sum(int(item['result'].get('source_count', 0)) for item in per_table_results),
+                    'target_count': sum(int(item['result'].get('target_count', 0)) for item in per_table_results),
+                    'message': (
+                        f"Duplicate metadata validation failed for {len(failed_tables)} table(s). "
+                        f"First failure [{first_failure['table_name']}]: "
+                        f"{first_failure['result'].get('message', 'Validation failed')}"
+                    ),
+                    'table_results': table_results,
+                }
+
+            return {
+                'status': 'PASSED',
+                'source_count': sum(int(item['result'].get('source_count', 0)) for item in per_table_results),
+                'target_count': sum(int(item['result'].get('target_count', 0)) for item in per_table_results),
+                'matched_count': len(per_table_results),
+                'message': f"No duplicates found across {len(per_table_results)} table(s) using Excel metadata",
+                'table_results': table_results,
+            }
 
         template_uses_table_placeholder = (
             '{table_name}' in query_config['source_query'] or '{table_name}' in query_config['target_query']
@@ -232,35 +772,15 @@ class TestCSVDrivenETLValidation:
                     source_query = self._resolve_query_variables(query_config['source_query'], table_vars)
                     target_query = self._resolve_query_variables(query_config['target_query'], table_vars)
                     try:
-                        with allure.step(f"Execute source query for {test_id} - {table_name}"):
-                            source_variables = {}
-                            target_vars = self._extract_variables_from_query(target_query)
-
-                            source_results = self.source_client.execute_query(source_query)
-                            allure.attach(
-                                str(source_results[:10]),
-                                name=f'Source Query Results (sample) - {table_name}',
-                                attachment_type=allure.attachment_type.TEXT
-                            )
-
-                            if 'recid_list' in target_vars:
-                                recid_list = [row['recid'] for row in source_results]
-                                source_variables['recid_list'] = recid_list
-                                allure.attach(
-                                    str(recid_list[:20]),
-                                    name=f'RecID List (first 20) - {table_name}',
-                                    attachment_type=allure.attachment_type.TEXT
-                                )
-
-                        with allure.step(f"Execute target query for {test_id} - {table_name}"):
-                            target_results = self._execute_query_with_variables(
-                                self.target_client, target_query, source_variables
-                            )
-                            allure.attach(
-                                str(target_results[:10]),
-                                name=f'Target Query Results (sample) - {table_name}',
-                                attachment_type=allure.attachment_type.TEXT
-                            )
+                        source_results, target_results = self._execute_queries_with_dynamic_order(
+                            test_id=test_id,
+                            validation_type=validation_type,
+                            source_query=source_query,
+                            target_query=target_query,
+                            source_lakehouse=str(table_vars.get('source_lakehouse', '')),
+                            target_lakehouse=str(table_vars.get('target_lakehouse', '')),
+                            label_suffix=table_name
+                        )
 
                         with allure.step(f"Execute validation: {validation_type} - {table_name}"):
                             runtime_test_case = dict(test_case)
@@ -279,7 +799,10 @@ class TestCSVDrivenETLValidation:
                                 'source_count': 0,
                                 'target_count': 0,
                                 'message': (
-                                    f"Query execution failed for table {table_name}: {exc}. "
+                                    f"Query execution failed for table={table_name}, "
+                                    f"source_lakehouse={table_vars.get('source_lakehouse', '')}, "
+                                    f"target_lakehouse={table_vars.get('target_lakehouse', '')}, "
+                                    f"error_type={exc.__class__.__name__}, error={exc}. "
                                     f"Source query: {source_query} | Target query: {target_query}"
                                 )
                             }
@@ -288,6 +811,18 @@ class TestCSVDrivenETLValidation:
             failed_tables = [
                 item for item in per_table_results if item['result'].get('status') != 'PASSED'
             ]
+            table_results = [
+                {
+                    'table_name': item['table_name'],
+                    'status': item['result'].get('status', 'UNKNOWN'),
+                    'source_count': int(item['result'].get('source_count', 0)),
+                    'target_count': int(item['result'].get('target_count', 0)),
+                    'source_recid_count': int(item['result'].get('source_recid_count', 0)),
+                    'target_recid_count': int(item['result'].get('target_recid_count', 0)),
+                    'message': item['result'].get('message', '')
+                }
+                                for item in per_table_results
+                            ]
 
             if failed_tables:
                 first_failure = failed_tables[0]
@@ -303,7 +838,8 @@ class TestCSVDrivenETLValidation:
                         f"Validation failed for {len(failed_tables)} table(s). "
                         f"First failure [{first_failure['table_name']}]: "
                         f"{first_failure['result'].get('message', 'Validation failed')}"
-                    )
+                    ),
+                    'table_results': table_results
                 }
 
             return {
@@ -315,32 +851,20 @@ class TestCSVDrivenETLValidation:
                     int(item['result'].get('target_count', 0)) for item in per_table_results
                 ),
                 'matched_count': len(per_table_results),
-                'message': f"All {len(per_table_results)} table validations passed"
+                'message': f"All {len(per_table_results)} table validations passed",
+                'table_results': table_results
             }
 
         source_query = self._resolve_query_variables(query_config['source_query'], query_variables)
         target_query = self._resolve_query_variables(query_config['target_query'], query_variables)
-        
-        with allure.step(f"Execute source query for {test_id}"):
-            source_variables = {}
-            target_vars = self._extract_variables_from_query(target_query)
-            
-            source_results = self.source_client.execute_query(source_query)
-            allure.attach(str(source_results[:10]), name='Source Query Results (sample)', 
-                         attachment_type=allure.attachment_type.TEXT)
-            
-            if 'recid_list' in target_vars:
-                recid_list = [row['recid'] for row in source_results]
-                source_variables['recid_list'] = recid_list
-                allure.attach(str(recid_list[:20]), name='RecID List (first 20)', 
-                             attachment_type=allure.attachment_type.TEXT)
-        
-        with allure.step(f"Execute target query for {test_id}"):
-            target_results = self._execute_query_with_variables(
-                self.target_client, target_query, source_variables
-            )
-            allure.attach(str(target_results[:10]), name='Target Query Results (sample)', 
-                         attachment_type=allure.attachment_type.TEXT)
+        source_results, target_results = self._execute_queries_with_dynamic_order(
+            test_id=test_id,
+            validation_type=validation_type,
+            source_query=source_query,
+            target_query=target_query,
+            source_lakehouse=str(query_variables.get('source_lakehouse', '')),
+            target_lakehouse=str(query_variables.get('target_lakehouse', ''))
+        )
         
         with allure.step(f"Execute validation: {validation_type}"):
             runtime_test_case = dict(test_case)
@@ -359,14 +883,76 @@ class TestCSVDrivenETLValidation:
             normalized_validation = str(validation_type).strip().lower()
 
             if normalized_validation == 'row_count_comparison':
-                source_count, target_count = self.validator.row_count_comparison(
-                    source_data, target_data
+                source_count = self._count_for_dashboard(source_data)
+                target_count = self._count_for_dashboard(target_data)
+
+                source_lh = str(test_case.get('source_lakehouse', '')).upper()
+                target_lh = str(test_case.get('target_lakehouse', '')).upper()
+                target_lhname = str(test_case.get('target_lhname_value', '')).upper()
+                is_d365_lakehouse = any(
+                    'D365' in value for value in (source_lh, target_lh, target_lhname)
                 )
+
+                if is_d365_lakehouse:
+                    if source_count >= target_count:
+                        return {
+                            'status': 'PASSED',
+                            'source_count': source_count,
+                            'target_count': target_count,
+                            'message': (
+                                f'D365 row count rule passed: source ({source_count}) >= '
+                                f'target ({target_count})'
+                            )
+                        }
+                    return {
+                        'status': 'FAILED',
+                        'source_count': source_count,
+                        'target_count': target_count,
+                        'message': (
+                            f'D365 row count rule failed: source ({source_count}) must be >= '
+                            f'target ({target_count})'
+                        )
+                    }
+
+                try:
+                    self.validator.row_count_comparison(source_data, target_data)
+                except AssertionError as e:
+                    return {
+                        'status': 'FAILED',
+                        'source_count': source_count,
+                        'target_count': target_count,
+                        'message': str(e)
+                    }
                 return {
                     'status': 'PASSED',
                     'source_count': source_count,
                     'target_count': target_count,
                     'message': f'Row counts match: {source_count}'
+                }
+
+            elif self._is_target_zero_validation(normalized_validation):
+                target_rows = list(target_data or [])
+                target_count = len(target_rows)
+                if target_count == 0:
+                    return {
+                        'status': 'PASSED',
+                        'source_count': len(source_data or []),
+                        'target_count': 0,
+                        'matched_count': 0,
+                        'message': 'Target query returned 0 records as expected'
+                    }
+
+                sample_rows = target_rows[:10]
+                return {
+                    'status': 'FAILED',
+                    'source_count': len(source_data or []),
+                    'target_count': target_count,
+                    'failed_count': target_count,
+                    'failed_records': sample_rows,
+                    'message': (
+                        f"Target query returned {target_count} record(s), expected 0. "
+                        f"Sample records: {sample_rows}"
+                    )
                 }
             
             elif normalized_validation in ('insert_record_validation', 'update_record_validation', 'delete_record_validation'):
@@ -379,6 +965,8 @@ class TestCSVDrivenETLValidation:
                         'status': 'FAILED',
                         'source_count': len(source_recids),
                         'target_count': len(target_recids),
+                        'source_recid_count': len(source_recids),
+                        'target_recid_count': len(target_recids),
                         'missing_count': len(missing_recids),
                         'missing_recids': list(missing_recids)[:10],
                         'message': f'{len(missing_recids)} recids missing in target'
@@ -388,8 +976,14 @@ class TestCSVDrivenETLValidation:
                     'status': 'PASSED',
                     'source_count': len(source_recids),
                     'target_count': len(source_recids),
+                    'source_recid_count': len(source_recids),
+                    'target_recid_count': len(target_recids),
                     'matched_count': len(source_recids),
-                    'message': f'All {len(source_recids)} recids found in target'
+                    'message': (
+                        'All source recids found in target'
+                        if len(source_recids) > 0
+                        else 'Source returned 0 recids; validation treated as PASS'
+                    )
                 }
             
             elif normalized_validation == 'soft_delete_consistency':
@@ -417,13 +1011,22 @@ class TestCSVDrivenETLValidation:
                     if 'TableName' in source_cols and 'TableName' in target_cols and key_columns == ['recid']:
                         key_columns = ['TableName', 'recid']
 
+                source_query = str(test_case.get('source_query', ''))
                 target_query = str(test_case.get('target_query', ''))
-                if '{recid_list}' in target_query:
-                    source_df = self.validator._to_dataframe(source_data, dataset_name='source_data')
-                    target_df = self.validator._to_dataframe(target_data, dataset_name='target_data')
+                if '{recid_list}' in source_query or '{recid_list}' in target_query:
+                    source_keys = self._extract_key_set(source_data, key_columns)
+                    target_keys = self._extract_key_set(target_data, key_columns)
 
-                    source_keys = set(map(tuple, source_df[key_columns].drop_duplicates().to_records(index=False)))
-                    target_keys = set(map(tuple, target_df[key_columns].drop_duplicates().to_records(index=False)))
+                    if not source_keys:
+                        return {
+                            'status': 'PASSED',
+                            'source_count': 0,
+                            'target_count': 0,
+                            'source_recid_count': 0,
+                            'target_recid_count': len(target_keys),
+                            'matched_count': 0,
+                            'message': 'Source returned 0 recids; validation treated as PASS'
+                        }
 
                     missing_keys = source_keys - target_keys
                     if missing_keys:
@@ -431,6 +1034,8 @@ class TestCSVDrivenETLValidation:
                             'status': 'FAILED',
                             'source_count': len(source_keys),
                             'target_count': len(target_keys),
+                            'source_recid_count': len(source_keys),
+                            'target_recid_count': len(target_keys),
                             'missing_count': len(missing_keys),
                             'message': f'{len(missing_keys)} source keys missing in target. Sample: {list(missing_keys)[:10]}'
                         }
@@ -439,6 +1044,8 @@ class TestCSVDrivenETLValidation:
                         'status': 'PASSED',
                         'source_count': len(source_keys),
                         'target_count': len(target_keys),
+                        'source_recid_count': len(source_keys),
+                        'target_recid_count': len(target_keys),
                         'matched_count': len(source_keys),
                         'message': f'All {len(source_keys)} source keys found in target'
                     }
@@ -495,6 +1102,25 @@ class TestCSVDrivenETLValidation:
                         f"Duplicate check passed on keys {key_columns}. "
                         f"Source duplicates={source_dups}, Target duplicates={target_dups}"
                     )
+                }
+            elif normalized_validation == 'duplicate_column_check_using_excel_metadata':
+                source_dup_groups = len(source_data or [])
+                target_dup_groups = len(target_data or [])
+                if source_dup_groups > 0 or target_dup_groups > 0:
+                    return {
+                        'status': 'FAILED',
+                        'source_count': source_dup_groups,
+                        'target_count': target_dup_groups,
+                        'message': (
+                            f"Duplicate groups found. Source={source_dup_groups}, Target={target_dup_groups}"
+                        ),
+                    }
+                return {
+                    'status': 'PASSED',
+                    'source_count': 0,
+                    'target_count': 0,
+                    'matched_count': 0,
+                    'message': 'No duplicate groups found in source and target',
                 }
 
             elif normalized_validation in ('aggregate_validation', 'aggregate_validations'):
@@ -564,11 +1190,15 @@ class TestCSVDrivenETLValidation:
         except AssertionError as e:
             return {
                 'status': 'FAILED',
+                'source_count': self._count_for_dashboard(source_data),
+                'target_count': self._count_for_dashboard(target_data),
                 'message': str(e)
             }
         except Exception as e:
             return {
                 'status': 'ERROR',
+                'source_count': self._count_for_dashboard(source_data),
+                'target_count': self._count_for_dashboard(target_data),
                 'message': f'Validation error: {str(e)}'
             }
     
@@ -600,10 +1230,12 @@ class TestCSVDrivenETLValidation:
         
         result = self._execute_validation(test_case)
         
-        if 'source_count' in result and 'target_count' in result:
-            allure.dynamic.label("Source_Count", str(result['source_count']))
-            allure.dynamic.label("Target_Count", str(result['target_count']))
-            allure.dynamic.label("Match_Status", f"S:{result['source_count']}=T:{result['target_count']}")
+        source_count = int(result.get('source_count', 0))
+        target_count = int(result.get('target_count', 0))
+        allure.dynamic.label("Source_Count", str(source_count))
+        allure.dynamic.label("Target_Count", str(target_count))
+        allure.dynamic.label("Match_Status", f"S:{source_count}=T:{target_count}")
+        allure.dynamic.label("Validation_Status", str(result.get('status', 'UNKNOWN')))
         
         with allure.step("Validation Results"):
             result_summary = f"""Table: {table_name}
@@ -613,12 +1245,26 @@ Validation: {validation_type}
 Status: {result['status']}
 Message: {result.get('message')}"""
             
-            if 'source_count' in result:
-                result_summary += f"\nSource Count: {result['source_count']}"
-            if 'target_count' in result:
-                result_summary += f"\nTarget Count: {result['target_count']}"
+            result_summary += f"\nSource Count: {source_count}"
+            result_summary += f"\nTarget Count: {target_count}"
             if 'matched_count' in result:
                 result_summary += f"\nMatched Records: {result['matched_count']}"
+            if 'source_recid_count' in result:
+                result_summary += f"\nSource RecID Count: {result['source_recid_count']}"
+            if 'target_recid_count' in result:
+                result_summary += f"\nTarget RecID Count: {result['target_recid_count']}"
+            if result.get('table_results'):
+                result_summary += "\n\nPer Table Results:"
+                for table_result in result['table_results']:
+                    result_summary += (
+                        f"\n- {table_result.get('table_name')}: "
+                        f"Status={table_result.get('status')} | "
+                        f"Source={table_result.get('source_count', 0)} | "
+                        f"Target={table_result.get('target_count', 0)} | "
+                        f"SourceRecIDs={table_result.get('source_recid_count', 0)} | "
+                        f"TargetRecIDs={table_result.get('target_recid_count', 0)} | "
+                        f"Message={table_result.get('message', '')}"
+                    )
             
             allure.attach(result_summary, name='Validation Summary', 
                          attachment_type=allure.attachment_type.TEXT)

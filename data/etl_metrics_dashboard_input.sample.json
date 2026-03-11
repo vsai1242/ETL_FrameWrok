@@ -1,0 +1,41 @@
+﻿{
+  "title": "Bronze vs Silver Data Validation Checks",
+  "xAxisTitle": "Test Cases",
+  "yAxisTitle": "Number of Lines (Count)",
+  "records": [
+    {
+      "testCase": "TestCase 1",
+      "source": {
+        "label": "Bronze (Source)",
+        "table": "CUSTINVOICEJOUR",
+        "lakehouse": "LH_AX_CANADA.fullload",
+        "validation": "Active Record Count",
+        "value": 15000
+      },
+      "target": {
+        "label": "Silver (Target)",
+        "table": "CUSTINVOICEJOUR",
+        "lakehouse": "dbo (LH_AX_CANADA)",
+        "validation": "Active Record Count",
+        "value": 15000
+      }
+    },
+    {
+      "testCase": "TestCase 2",
+      "source": {
+        "label": "Bronze (Source)",
+        "table": "CUSTTRANS",
+        "lakehouse": "LH_AX_CANADA.fullload",
+        "validation": "Updated Records",
+        "value": 450
+      },
+      "target": {
+        "label": "Silver (Target)",
+        "table": "CUSTTRANS",
+        "lakehouse": "dbo (LH_AX_CANADA)",
+        "validation": "Updated Records",
+        "value": 450
+      }
+    }
+  ]
+}

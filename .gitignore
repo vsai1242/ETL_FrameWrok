@@ -72,6 +72,11 @@ config/.env
 # Allure CLI
 allure-*/
 *.zip
+# Allure / reports
+reports/
+allure-results/
+allure-report/
+
 
 # OS
 .DS_Store
@@ -100,3 +105,16 @@ npm-debug.log*
 # Docker
 .dockerignore
 docker-compose.override.yml
+# Excel temp files
+.~lock*
+*.crdownload
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# IDE
+.vscode/
