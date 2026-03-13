@@ -12,14 +12,17 @@ from utils.predefined_validations import PredefinedValidations
 @allure.feature("CSV-Driven ETL Validation")
 class TestCSVDrivenETLValidation:
     """CSV-Driven ETL Validation - Manual testers control tests via CSV"""
+    CSV_FILE = "data/etl_validation_bronze_to_silver_tests.csv"
+    SOURCE_LAYER = "BRONZE"
+    TARGET_LAYER = "SILVER"
     METADATA_FILE = Path("data/COLUMNS_2.xlsx")
     _metadata_cache = None
     
     @classmethod
     def setup_class(cls):
         """Setup database clients and load CSV tests"""
-        cls.source_client = FabricClient('BRONZE')
-        cls.target_client = FabricClient('SILVER')
+        cls.source_client = FabricClient(cls.SOURCE_LAYER)
+        cls.target_client = FabricClient(cls.TARGET_LAYER)
         cls.validator = PredefinedValidations()
         cls.test_cases = cls._load_test_cases()
 
@@ -34,8 +37,7 @@ class TestCSVDrivenETLValidation:
     @classmethod
     def _load_test_cases(cls) -> List[Dict]:
         """Load test cases from CSV"""
-        csv_file = "data/etl_validation_tests.csv"
-        df = pd.read_csv(csv_file)
+        df = pd.read_csv(cls.CSV_FILE)
         df = df.fillna('')
         df['enabled'] = df['enabled'].astype(str)
         enabled_df = df[df['enabled'].str.upper() == 'TRUE']
@@ -303,6 +305,81 @@ class TestCSVDrivenETLValidation:
         if not raw_tables:
             return []
         return [table.strip() for table in raw_tables.split(',') if table.strip()]
+
+    @classmethod
+    def _get_dimension_list(cls, test_case: Dict) -> List[str]:
+        """Return dimension names from CSV field (supports comma-separated values)."""
+        raw_dimensions = cls._csv_value(test_case, 'Dimension')
+        if not raw_dimensions:
+            return []
+        return [dimension.strip() for dimension in raw_dimensions.split(',') if dimension.strip()]
+
+    @classmethod
+    def _build_placeholder_execution_items(
+        cls,
+        test_case: Dict[str, Any],
+        query_config: Dict[str, str],
+        table_list: List[str],
+        dimension_list: List[str],
+    ) -> List[Dict[str, str]]:
+        """Build execution items for placeholder-driven query templates."""
+        template_uses_table_placeholder = (
+            '{table_name}' in query_config['source_query'] or '{table_name}' in query_config['target_query']
+        )
+        template_uses_dimension_placeholder = (
+            '{Dimension}' in query_config['source_query'] or '{Dimension}' in query_config['target_query']
+        )
+
+        if not template_uses_table_placeholder and not template_uses_dimension_placeholder:
+            return []
+
+        table_values = table_list if template_uses_table_placeholder else []
+        dimension_values = dimension_list if template_uses_dimension_placeholder else []
+
+        if template_uses_table_placeholder and not table_values:
+            table_values = [cls._csv_value(test_case, 'table_name')]
+        if template_uses_dimension_placeholder and not dimension_values:
+            dimension_values = [cls._csv_value(test_case, 'Dimension')]
+
+        if template_uses_table_placeholder and template_uses_dimension_placeholder:
+            if len(table_values) != len(dimension_values):
+                test_id = str(test_case.get('test_id', '<unknown>'))
+                raise ValueError(
+                    f"Invalid table/dimension pairing for {test_id}: table_name has {len(table_values)} values "
+                    f"but Dimension has {len(dimension_values)}. When both placeholders are used, counts must match exactly."
+                )
+
+            return [
+                {
+                    'table_name': table_name,
+                    'Dimension': dimension_name,
+                    'label': (
+                        f"{dimension_name} - {table_name}"
+                        if dimension_name and table_name
+                        else dimension_name or table_name or str(test_case.get('test_id', ''))
+                    ),
+                }
+                for table_name, dimension_name in zip(table_values, dimension_values)
+            ]
+
+        if template_uses_table_placeholder:
+            return [
+                {
+                    'table_name': table_name,
+                    'Dimension': cls._csv_value(test_case, 'Dimension'),
+                    'label': table_name or str(test_case.get('test_id', '')),
+                }
+                for table_name in table_values
+            ]
+
+        return [
+            {
+                'table_name': cls._csv_value(test_case, 'table_name'),
+                'Dimension': dimension_name,
+                'label': dimension_name or str(test_case.get('test_id', '')),
+            }
+            for dimension_name in dimension_values
+        ]
 
     @staticmethod
     def _count_for_dashboard(data: Any) -> int:
@@ -668,6 +745,7 @@ class TestCSVDrivenETLValidation:
         query_variables = self._build_query_variables(test_case)
         validation_type = test_case['validation_type']
         table_list = self._get_table_list(test_case)
+        dimension_list = self._get_dimension_list(test_case)
         normalized_validation = str(validation_type).strip().lower()
 
         if normalized_validation == 'duplicate_column_check_using_excel_metadata':
@@ -759,49 +837,74 @@ class TestCSVDrivenETLValidation:
         template_uses_table_placeholder = (
             '{table_name}' in query_config['source_query'] or '{table_name}' in query_config['target_query']
         )
+        template_uses_dimension_placeholder = (
+            '{Dimension}' in query_config['source_query'] or '{Dimension}' in query_config['target_query']
+        )
 
-        # If query templates use {table_name} and CSV provides multiple tables,
-        # execute each table independently with same setup and aggregate outcome.
-        if template_uses_table_placeholder and len(table_list) > 1:
+        try:
+            execution_items = self._build_placeholder_execution_items(
+                test_case=test_case,
+                query_config=query_config,
+                table_list=table_list,
+                dimension_list=dimension_list,
+            )
+        except ValueError as exc:
+            return {
+                'status': 'ERROR',
+                'source_count': 0,
+                'target_count': 0,
+                'message': str(exc),
+            }
+
+        # If query templates resolve to multiple items, execute each item independently and aggregate.
+        if len(execution_items) > 1:
             per_table_results = []
+            for execution_item in execution_items:
+                execution_label = execution_item['label'] or test_id
+                table_name = execution_item['table_name']
+                dimension_name = execution_item['Dimension']
 
-            for table_name in table_list:
-                with allure.step(f"Execute table {table_name} for {test_id}"):
-                    table_vars = dict(query_variables)
-                    table_vars['table_name'] = table_name
-                    source_query = self._resolve_query_variables(query_config['source_query'], table_vars)
-                    target_query = self._resolve_query_variables(query_config['target_query'], table_vars)
+                with allure.step(f"Execute item {execution_label} for {test_id}"):
+                    item_vars = dict(query_variables)
+                    if template_uses_table_placeholder:
+                        item_vars['table_name'] = table_name
+                    if template_uses_dimension_placeholder:
+                        item_vars['Dimension'] = dimension_name
+
+                    source_query = self._resolve_query_variables(query_config['source_query'], item_vars)
+                    target_query = self._resolve_query_variables(query_config['target_query'], item_vars)
                     try:
                         source_results, target_results = self._execute_queries_with_dynamic_order(
                             test_id=test_id,
                             validation_type=validation_type,
                             source_query=source_query,
                             target_query=target_query,
-                            source_lakehouse=str(table_vars.get('source_lakehouse', '')),
-                            target_lakehouse=str(table_vars.get('target_lakehouse', '')),
-                            label_suffix=table_name
+                            source_lakehouse=str(item_vars.get('source_lakehouse', '')),
+                            target_lakehouse=str(item_vars.get('target_lakehouse', '')),
+                            label_suffix=execution_label
                         )
 
-                        with allure.step(f"Execute validation: {validation_type} - {table_name}"):
+                        with allure.step(f"Execute validation: {validation_type} - {execution_label}"):
                             runtime_test_case = dict(test_case)
                             runtime_test_case['table_name'] = table_name
+                            runtime_test_case['Dimension'] = dimension_name
                             runtime_test_case['source_query'] = source_query
                             runtime_test_case['target_query'] = target_query
                             result = self._run_validation(
                                 validation_type, source_results, target_results, runtime_test_case
                             )
-                            per_table_results.append({'table_name': table_name, 'result': result})
+                            per_table_results.append({'table_name': execution_label, 'result': result})
                     except Exception as exc:
                         per_table_results.append({
-                            'table_name': table_name,
+                            'table_name': execution_label,
                             'result': {
                                 'status': 'ERROR',
                                 'source_count': 0,
                                 'target_count': 0,
                                 'message': (
-                                    f"Query execution failed for table={table_name}, "
-                                    f"source_lakehouse={table_vars.get('source_lakehouse', '')}, "
-                                    f"target_lakehouse={table_vars.get('target_lakehouse', '')}, "
+                                    f"Query execution failed for item={execution_label}, "
+                                    f"source_lakehouse={item_vars.get('source_lakehouse', '')}, "
+                                    f"target_lakehouse={item_vars.get('target_lakehouse', '')}, "
                                     f"error_type={exc.__class__.__name__}, error={exc}. "
                                     f"Source query: {source_query} | Target query: {target_query}"
                                 )
@@ -835,7 +938,7 @@ class TestCSVDrivenETLValidation:
                         int(item['result'].get('target_count', 0)) for item in per_table_results
                     ),
                     'message': (
-                        f"Validation failed for {len(failed_tables)} table(s). "
+                        f"Validation failed for {len(failed_tables)} item(s). "
                         f"First failure [{first_failure['table_name']}]: "
                         f"{first_failure['result'].get('message', 'Validation failed')}"
                     ),
@@ -851,9 +954,18 @@ class TestCSVDrivenETLValidation:
                     int(item['result'].get('target_count', 0)) for item in per_table_results
                 ),
                 'matched_count': len(per_table_results),
-                'message': f"All {len(per_table_results)} table validations passed",
+                'message': f"All {len(per_table_results)} item validations passed",
                 'table_results': table_results
             }
+
+        if len(execution_items) == 1:
+            single_item = execution_items[0]
+            if template_uses_table_placeholder:
+                query_variables['table_name'] = single_item['table_name']
+            if template_uses_dimension_placeholder:
+                query_variables['Dimension'] = single_item['Dimension']
+        elif template_uses_dimension_placeholder and len(dimension_list) == 1:
+            query_variables['Dimension'] = dimension_list[0]
 
         source_query = self._resolve_query_variables(query_config['source_query'], query_variables)
         target_query = self._resolve_query_variables(query_config['target_query'], query_variables)
@@ -868,6 +980,10 @@ class TestCSVDrivenETLValidation:
         
         with allure.step(f"Execute validation: {validation_type}"):
             runtime_test_case = dict(test_case)
+            if template_uses_table_placeholder:
+                runtime_test_case['table_name'] = query_variables.get('table_name', '')
+            if template_uses_dimension_placeholder:
+                runtime_test_case['Dimension'] = query_variables.get('Dimension', '')
             runtime_test_case['source_query'] = source_query
             runtime_test_case['target_query'] = target_query
             result = self._run_validation(

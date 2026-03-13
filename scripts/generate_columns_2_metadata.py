@@ -31,7 +31,7 @@ if str(ROOT_DIR) not in sys.path:
 from utils.fabric_client import FabricClient
 
 
-DEFAULT_CSV = Path("data/etl_validation_tests.csv")
+DEFAULT_CSV = Path("data/etl_validation_bronze_to_silver_tests.csv")
 DEFAULT_OUTPUT = Path("data/COLUMNS_2.xlsx")
 HEADER = ["LakehouseName", "TableName", "ColumnName"]
 TARGET_DEFAULT = "LH_Finance"

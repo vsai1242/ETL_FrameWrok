@@ -221,6 +221,98 @@ def _attach_dashboard_payload(result_files, dashboard_filename):
         return
 
 
+def _extract_allure_attachment_sources(payload):
+    sources = set()
+
+    def _visit(node):
+        if isinstance(node, dict):
+            source = node.get("source")
+            if isinstance(source, str) and source:
+                sources.add(source)
+            for value in node.values():
+                _visit(value)
+        elif isinstance(node, list):
+            for item in node:
+                _visit(item)
+
+    _visit(payload)
+    return sources
+
+
+def _extract_collected_csv_test_ids(items):
+    test_ids = set()
+    for item in items:
+        callspec = getattr(item, "callspec", None)
+        if not callspec:
+            continue
+        params = getattr(callspec, "params", {}) or {}
+        test_case = params.get("test_case")
+        if not isinstance(test_case, dict):
+            continue
+        test_id = str(test_case.get("test_id", "")).strip()
+        if test_id:
+            test_ids.add(test_id)
+    return test_ids
+
+
+def _result_matches_collected_test_ids(result_data, collected_test_ids):
+    if not collected_test_ids:
+        return False
+
+    result_name = str(result_data.get("name", "")).strip()
+    if any(result_name.startswith(f"{test_id}:") for test_id in collected_test_ids):
+        return True
+
+    parameters = result_data.get("parameters", [])
+    for parameter in parameters:
+        parameter_value = str(parameter.get("value", ""))
+        for test_id in collected_test_ids:
+            if f"'test_id': '{test_id}'" in parameter_value or f'"test_id": "{test_id}"' in parameter_value:
+                return True
+
+    return False
+
+
+def _remove_stale_allure_results(results_dir, collected_test_ids):
+    if not results_dir or not results_dir.exists() or not collected_test_ids:
+        return
+
+    for result_file in results_dir.glob("*-result.json"):
+        try:
+            result_data = json.loads(result_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        if not _result_matches_collected_test_ids(result_data, collected_test_ids):
+            continue
+
+        for attachment_source in _extract_allure_attachment_sources(result_data):
+            attachment_path = results_dir / attachment_source
+            if attachment_path.exists():
+                try:
+                    attachment_path.unlink()
+                except Exception:
+                    pass
+
+        try:
+            result_file.unlink()
+        except Exception:
+            pass
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(session, config, items):
+    del session
+    results_dir = _safe_get_allure_results_dir(config)
+    if not results_dir:
+        fallback = Path("reports/allure-results")
+        if fallback.exists():
+            results_dir = fallback
+
+    collected_test_ids = _extract_collected_csv_test_ids(items)
+    _remove_stale_allure_results(results_dir, collected_test_ids)
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     """Create ETL dashboard JSON in allure-results and expose it as an attachment."""

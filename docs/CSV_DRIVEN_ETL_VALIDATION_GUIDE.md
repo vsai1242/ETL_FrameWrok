@@ -13,7 +13,7 @@
 
 ## 📋 CSV File Structure
 
-**File:** `data/etl_validation_tests.csv`
+**File:** `data/etl_validation_bronze_to_silver_tests.csv`
 
 ### **Columns:**
 
@@ -65,6 +65,26 @@ TEST_07,Sum Check,SELECT SUM(amount) FROM source,SELECT SUM(amount) FROM target,
 ---
 
 ## 🎯 Using Variables in Queries
+
+### **Positional Pairing for `{table_name}` and `{Dimension}`**
+
+When a query uses both `{table_name}` and `{Dimension}`, the framework matches values by position instead of creating every possible combination.
+
+```csv
+table_name=table1,table2,table3
+Dimension=dim1,dim2,dim3
+```
+
+Executions produced:
+- `table1 -> dim1`
+- `table2 -> dim2`
+- `table3 -> dim3`
+
+Rules:
+- If both placeholders are present, the number of `table_name` and `Dimension` values must match exactly.
+- If only `{table_name}` is present, execution continues once per table.
+- If only `{Dimension}` is present, execution continues once per dimension.
+- Lakehouse expansion still runs independently before placeholder execution.
 
 ### **Problem:** You want to get recids from Bronze and check if they exist in Silver
 
@@ -152,7 +172,7 @@ For each test, you'll see:
 
 ### **Step 1: Open CSV File**
 ```bash
-data/etl_validation_tests.csv
+data/etl_validation_bronze_to_silver_tests.csv
 ```
 
 ### **Step 2: Add Your Test**
